@@ -1,0 +1,41 @@
+---
+// The audit tool entry. Minimal distraction: one heading, one line of framing,
+// the form. Copy status: DRAFT pending brand-voice pass.
+import Base from '../layouts/Base.astro';
+import AuditFlow from '../islands/AuditFlow';
+
+const schema = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Factoring Contract Audit',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web',
+    url: 'https://xcapfactoring.com/audit',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    description:
+      'Upload your factoring agreement and get an automated audit: your true effective rate, the clauses working against you, and an honest read on whether better terms exist.',
+    provider: { '@type': 'Organization', name: 'XCap Factoring' },
+  },
+];
+---
+
+<Base
+  title="Free Factoring Contract Audit | XCap Factoring"
+  description="Upload your factoring agreement. We read every clause, compute the rate you actually pay, and give you an honest yes or no on whether better terms exist."
+  schema={schema}
+>
+  <main class="section-pad" style="padding-top: clamp(2.5rem, 6vw, 4.5rem);">
+    <div class="container-page">
+      <div class="mx-auto mb-8 max-w-xl text-center">
+        <p class="eyebrow mb-3">The contract audit</p>
+        <h1 class="display h2 mb-4">See what your contract <span class="marker-h">really costs</span></h1>
+        <p class="lede">
+          Upload your factoring agreement. In about a minute you get the rate you actually pay, the clauses working against
+          you, and an honest yes or no on whether a move makes sense.
+        </p>
+      </div>
+      <AuditFlow client:visible mode="form" />
+    </div>
+  </main>
+</Base>

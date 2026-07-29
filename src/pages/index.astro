@@ -1,0 +1,500 @@
+---
+// Homepage. Copy status: DRAFT PENDING BRAND-VOICE PASS (voice profile not yet extracted).
+// Gates applied: golden-rules (invite, show over tell, honesty floor), compliance-claims
+// (broker-not-factor, clauses-not-companies, every number sourced or labeled illustration),
+// avatar-matrix language, no em-dashes.
+import Base from '../layouts/Base.astro';
+import ContractSheet from '../components/ContractSheet.astro';
+import ComparisonTable from '../components/ComparisonTable.astro';
+import FaqBlock from '../components/FaqBlock.astro';
+import AuditCta from '../components/AuditCta.astro';
+import StatBand from '../components/StatBand.astro';
+import SectionDivider from '../components/SectionDivider.astro';
+import ExhibitCard from '../components/ExhibitCard.astro';
+import Pic from '../components/Pic.astro';
+
+const faq = [
+  {
+    q: 'Is 3% just the cost of doing business?',
+    a: 'Sometimes. Published 2026 benchmarks run roughly 1 to 4% per 30 days depending on industry, volume, and payment history. The headline number matters less than the mechanics around it: what the rate is charged on, how it escalates by tier, minimum-day charges, float days, and monthly minimums. That stack is what the audit computes from your specific contract.',
+  },
+  {
+    q: 'Can I actually get out of my factoring contract?',
+    a: 'Almost always yes, but on the contract’s calendar, not yours. Most agreements auto-renew unless you give written notice inside a specific window, and a clean exit runs in order: balances to zero, a buyout if invoices are open, the release letter, then the UCC termination. The audit circles your dates and lays out the steps.',
+  },
+  {
+    q: 'Do I have to factor every customer and every invoice?',
+    a: 'Only if your contract says so. Whole-ledger clauses require everything; selective contracts let you pick customers and invoices. Plenty of owners have never checked which one they signed. It is one of the first things we look for.',
+  },
+  {
+    q: 'What does the audit cost?',
+    a: 'Nothing, and that is not a teaser. We are a placement broker: if we place you with a better factor, that factor compensates us. If your contract is already competitive, we tell you so and you have lost a minute. Either way, you never get a bill for the audit.',
+  },
+  {
+    q: 'Are you a factoring company?',
+    a: 'No. We do not buy invoices and we do not fund advances. We audit factoring agreements, compare the terms against current market standards, and place businesses with factors in our network when the math clearly favors a move.',
+  },
+  {
+    q: 'What happens to my contract after I upload it?',
+    a: 'It is used only to prepare your audit. It is stored privately, reviewed only by our team, and deleted within 90 days unless you are actively working with us. Ask and we delete it sooner.',
+  },
+];
+
+const industries = [
+  {
+    img: 'industry-trucking' as const,
+    name: 'Trucking',
+    line: 'Rate cons, quick pays, chargebacks, reserves you cannot touch. Owner-operators and small fleets are the reason this audit exists.',
+  },
+  {
+    img: 'industry-staffing' as const,
+    name: 'Staffing',
+    line: 'Weekly payroll against net-60 clients. Know exactly what the spread is costing you before renewal.',
+  },
+  {
+    img: 'industry-construction' as const,
+    name: 'Construction',
+    line: 'Pay-when-paid chains and retainage make factoring terms matter twice as much here.',
+  },
+  {
+    img: 'industry-manufacturing' as const,
+    name: 'Manufacturing',
+    line: 'PO-to-cash gaps at real margins. Your all-in cost per order, computed instead of guessed.',
+  },
+];
+
+const comparisonRows = [
+  {
+    label: 'Headline rate',
+    bad: 'A 2%-a-month headline that escalates tier by tier after day 30, reaching 10%+ on old invoices.',
+    good: 'Typically around 1 to 1.5% monthly equivalent, charged as a daily rate.',
+  },
+  {
+    label: 'What the rate is charged on',
+    bad: 'The full invoice face, including the 10 to 15% that was never advanced to you.',
+    good: 'Only the amount actually advanced to you.',
+  },
+  {
+    label: 'Fast-paying invoices',
+    bad: 'A 30-day minimum charge: the invoice that paid in a week costs the same as one that took a month.',
+    good: 'A daily rate means a 7-day invoice costs 7 days.',
+  },
+  {
+    label: 'Which invoices you factor',
+    bad: 'Whole ledger. Every customer, every invoice, or the account is in breach.',
+    good: 'You pick the customers and the invoices.',
+  },
+  {
+    label: 'Getting out',
+    bad: 'Exit only inside a narrow notice window before auto-renewal, plus early termination fees.',
+    good: 'A clean exit path, in writing, before you sign.',
+    stamp: 'TRAP',
+  },
+];
+---
+
+<Base
+  title="XCap Factoring | Find Out What Your Factoring Contract Really Costs"
+  description="Upload your factoring agreement for a free audit: your true effective rate, every trap clause found, estimated annual savings, and an honest verdict. We audit factoring contracts, we don't sell them."
+>
+  <!-- ============ HERO ============ -->
+  <section class="relative overflow-clip" data-parallax-zone data-tilt-zone>
+    <!-- photo layer: desktop only; mobile LCP stays on the H1 text -->
+    <div class="hero-photo grain" aria-hidden="true">
+      <picture>
+        <source srcset="/img/hero-desk.avif" type="image/avif" />
+        <source srcset="/img/hero-desk.webp" type="image/webp" />
+        <img
+          src="/img/hero-desk.jpg"
+          alt=""
+          class="absolute inset-0 h-full w-full object-cover"
+          data-kenburns
+          loading="eager"
+          decoding="async"
+        />
+      </picture>
+      <div class="absolute inset-0 bg-gradient-to-r from-paper via-paper/[0.93] to-paper/45"></div>
+      <div class="absolute inset-0 bg-gradient-to-t from-paper via-transparent to-paper/70"></div>
+    </div>
+
+    <div class="container-page relative z-10 grid min-h-[calc(100svh-4rem)] items-center gap-12 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
+      <div class="max-w-2xl">
+        <p class="eyebrow" data-reveal>The factoring contract auditor</p>
+        <h1 class="display h1 mt-4 text-ink">
+          Find out what your factoring contract <span class="marker-h" data-marker data-marker-delay="0.4">really costs</span>.
+        </h1>
+        <p class="lede mt-6 max-w-xl" data-reveal>
+          Upload your agreement. We read every fee, tier, minimum, and trap clause, then show your
+          true effective rate and what you could save with better terms. Free, in about a minute.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center gap-4" data-reveal>
+          <a href="/audit" class="btn btn-primary" data-magnetic>Audit my contract</a>
+          <a href="/#how-it-works" class="btn btn-ghost">How it works</a>
+        </div>
+        <ul class="mt-7 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[0.72rem] uppercase tracking-[0.14em] text-inksoft" data-reveal>
+          <li>Free</li>
+          <li>Confidential</li>
+          <li>We are not a factor</li>
+        </ul>
+      </div>
+
+      <div class="relative mx-auto w-full max-w-[300px] sm:max-w-[360px] lg:max-w-[400px]" data-parallax="-0.06">
+        <div class="absolute -inset-6 rounded-2xl bg-marker/10 blur-2xl" aria-hidden="true"></div>
+        <ContractSheet variant="hero" class="relative aspect-[3/4] w-full" />
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ THE WEDGE ============ -->
+  <section id="wedge" class="relative overflow-clip">
+    <div
+      class="pointer-events-none absolute inset-0 opacity-[0.35]"
+      style="background-image:url(/img/texture-ledger.webp);background-size:520px;"
+      data-parallax="0.06"
+      aria-hidden="true"
+    >
+    </div>
+    <div class="container-page section-pad relative z-10">
+      <div class="max-w-2xl">
+        <p class="eyebrow" data-reveal>The effective-rate gap</p>
+        <h2 class="display h2 mt-3 text-ink" data-reveal>
+          You were quoted 2% a month. Your contract does different math.
+        </h2>
+        <p class="lede mt-5" data-reveal>
+          2% a month sounds like 24% a year. Then the mechanics stack, and real contracts land at
+          30 to 40% or more of the cash you actually received. Here is how the gap opens.
+        </p>
+      </div>
+
+      <div class="mt-14 grid items-start gap-10 lg:grid-cols-[1fr_1.1fr]">
+        <!-- gauge + published example -->
+        <div class="flex flex-col items-center" data-gauge data-reveal>
+          <svg viewBox="0 0 300 190" class="w-full max-w-[340px]" aria-hidden="true">
+            <path d="M 30 170 A 120 120 0 0 1 270 170" fill="none" stroke="#E3DED4" stroke-width="14" stroke-linecap="round" />
+            <path d="M 30 170 A 120 120 0 0 1 270 170" fill="none" stroke="#C0392B" stroke-width="14" stroke-linecap="round"
+              data-gauge-arc data-gauge-min="15" data-gauge-max="60" data-gauge-from="24" data-gauge-to="30" />
+            <g font-family="Spline Sans Mono, monospace" font-size="11" fill="#4A5568">
+              <text x="22" y="188">15%</text>
+              <text x="76" y="60">24%</text>
+              <text x="256" y="188">60%</text>
+            </g>
+            <line x1="97" y1="72" x2="104" y2="86" stroke="#101D33" stroke-width="2" />
+          </svg>
+          <p class="display -mt-16 text-[3.4rem] font-bold text-flag tnum">
+            <span data-countup="30" data-from="24" data-suffix="%" data-duration="2">24%</span>
+          </p>
+          <p class="body-copy mt-1 text-center text-inksoft">
+            effective annual rate in the industry's own published example
+          </p>
+          <ExhibitCard tilt="l" class="mt-8 w-full max-w-md" stamp="EXHIBIT A" stampTone="flag">
+            <p class="mono-quote text-ink/90">
+              $10,000 invoice. 85% advance, so $8,500 in hand. 2.5% fee = $250. Paid in 30 days.
+              Effective rate on the cash received: <strong>roughly 30% annualized</strong>.
+            </p>
+            <p class="mt-3 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-inksoft">
+              Corpay's published worked example. Their published range: 15 to 60%+.
+            </p>
+          </ExhibitCard>
+        </div>
+
+        <!-- the four mechanics -->
+        <div class="flex flex-col gap-4" data-reveal-group>
+          {[
+            {
+              t: 'The rate escalates',
+              d: '2% covers the first 30 days. Tiers stack after that: real contracts bill 2.7%, 3.5%, and beyond as the invoice ages.',
+            },
+            {
+              t: 'The fee is charged on the full invoice',
+              d: 'You received an 85 to 90% advance, but the percentage is computed on 100% of the face value. Money you never held, billed anyway.',
+            },
+            {
+              t: 'Fast invoices are billed slow',
+              d: 'A 30-day minimum charge means the invoice your customer paid in 7 days costs the same as one that dragged a month.',
+            },
+            {
+              t: 'Float days keep the meter running',
+              d: 'Two to ten "clearing" days of charges after the customer already paid. The industry’s own manual calls anything past 2 or 3 unreasonable.',
+            },
+          ].map((m, i) => (
+            <div class="sheet flex gap-5 p-6">
+              <span class="display mt-0.5 text-xl font-bold text-flag tnum">{String(i + 1).padStart(2, '0')}</span>
+              <div>
+                <h3 class="display text-[1.08rem] font-semibold text-ink">{m.t}</h3>
+                <p class="body-copy mt-1.5 text-inksoft">{m.d}</p>
+              </div>
+            </div>
+          ))}
+          <p class="mt-2 font-mono text-[0.7rem] leading-relaxed text-inksoft">
+            Mechanics documented in current published factor terms and a real SEC-filed factoring
+            agreement. Shown as an illustration of how the math works, not a claim about any
+            specific company. Your contract sets your numbers.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <SectionDivider />
+
+  <!-- ============ THE CENTERPIECE: CONTRACT X-RAY ============ -->
+  <section id="xray" data-xray class="relative">
+    <div class="container-page flex min-h-svh flex-col justify-center py-14 md:py-0">
+      <div class="grid items-center gap-10 md:grid-cols-[0.95fr_1.05fr] lg:gap-16">
+        <div>
+          <p class="eyebrow">The audit, demonstrated</p>
+          <h2 class="display h2 mt-3 text-ink">Watch the auditor read a contract.</h2>
+          <div class="mt-8 flex flex-col gap-5">
+            {[
+              {
+                k: 'Rate tier',
+                d: 'The 2% you remember is the day-1 tier. At a 40-day pay cycle, this contract bills 2.7%.',
+                v: '+$4,200 / yr',
+              },
+              {
+                k: '30-day minimum',
+                d: 'Invoices that pay in 12 days are billed as if they took 30.',
+                v: '+$1,440 / yr',
+              },
+              {
+                k: 'Float days',
+                d: 'Three more days of charges after the customer already paid.',
+                v: '+$1,260 / yr',
+              },
+              {
+                k: 'The exit window',
+                d: 'Miss a 60-day certified-mail window and the whole thing renews itself for another year.',
+                v: 'locks the door',
+              },
+            ].map((c) => (
+              <div class="xray-caption border-l-2 border-rule pl-5 opacity-45 transition-all duration-300" data-xray-caption>
+                <div class="flex items-baseline justify-between gap-4">
+                  <h3 class="display text-[1.05rem] font-semibold text-ink">{c.k}</h3>
+                  <span class="font-mono text-[0.78rem] font-semibold text-flag tnum">{c.v}</span>
+                </div>
+                <p class="body-copy mt-1 text-inksoft">{c.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div class="relative mx-auto w-full max-w-[300px] sm:max-w-[340px] md:max-w-[420px]">
+          <div class="mb-4 flex items-center justify-between rounded-lg bg-navy px-5 py-3 text-cream shadow-sheet">
+            <span class="font-mono text-[0.68rem] uppercase tracking-[0.16em] opacity-80">Found in this example, per year</span>
+            <span class="display text-xl font-bold text-marker tnum" data-xray-counter data-total="6900">$0</span>
+          </div>
+          <ContractSheet variant="xray" class="aspect-[3/4.1] w-full" />
+        </div>
+      </div>
+      <p class="mx-auto mt-10 max-w-3xl text-center font-mono text-[0.7rem] leading-relaxed text-inksoft">
+        Illustration: $600,000 factored per year at a quoted 2% per 30 days, invoices paying on day
+        40 on average, one fifth of volume paying inside 12 days, 3 clearing days. Real contracts
+        vary. The audit runs your actual numbers.
+      </p>
+    </div>
+  </section>
+
+  <SectionDivider />
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section id="how-it-works" class="container-page section-pad">
+    <div class="max-w-2xl">
+      <p class="eyebrow" data-reveal>How it works</p>
+      <h2 class="display h2 mt-3 text-ink" data-reveal>Three steps. One honest number.</h2>
+    </div>
+
+    <div class="relative mt-14 grid gap-10 md:grid-cols-3">
+      <div class="absolute -top-5 left-0 hidden h-px w-full bg-rule md:block" data-step-line></div>
+      {[
+        {
+          n: '01',
+          t: 'Upload the contract',
+          d: 'PDF or phone photos. The agreement you signed, or one you have just been offered. About 60 seconds of your day.',
+        },
+        {
+          n: '02',
+          t: 'The auditor reads every line',
+          d: 'Every fee, tier, minimum, float day, guarantee, renewal window, and release clause. Then the math runs your numbers across three payment-timing scenarios.',
+        },
+        {
+          n: '03',
+          t: 'You get the real number',
+          d: 'Your true effective rate, the clauses that cost you, an estimated annual savings, and an honest verdict. If your contract is competitive, we say exactly that.',
+        },
+      ].map((s) => (
+        <div data-reveal>
+          <span class="font-mono text-[0.8rem] font-semibold text-flag tnum">{s.n}</span>
+          <h3 class="display mt-2 text-[1.15rem] font-semibold text-ink">{s.t}</h3>
+          <p class="body-copy mt-2 text-inksoft">{s.d}</p>
+        </div>
+      ))}
+    </div>
+
+    <!-- the report, previewed truthfully (same structure the tool outputs) -->
+    <div class="mt-16 grid items-center gap-10 lg:grid-cols-[1fr_1fr]">
+      <ExhibitCard tilt="r" class="mx-auto w-full max-w-md" stamp="SAMPLE" stampTone="green">
+        <div class="-m-6 md:-m-7">
+          <div class="rounded-t-[0.45rem] bg-navy px-6 py-4">
+            <p class="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-cream/75">Contract audit report</p>
+            <p class="display mt-1 text-lg font-bold text-cream">Sample Carrier LLC</p>
+          </div>
+          <div class="grid grid-cols-2 gap-4 border-b border-rule px-6 py-5">
+            <div>
+              <p class="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-inksoft">You think you pay</p>
+              <p class="display text-2xl font-bold text-ink tnum">24%<span class="text-sm">/yr</span></p>
+            </div>
+            <div>
+              <p class="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-inksoft">Effective at day 40</p>
+              <p class="display text-2xl font-bold text-flag tnum">33.8%<span class="text-sm">/yr</span></p>
+            </div>
+          </div>
+          <div class="flex flex-col gap-2.5 px-6 py-5">
+            {['Tiered escalation past day 30', 'Fee charged on full invoice face', '30-day minimum on fast payers'].map((f) => (
+              <div class="flex items-center gap-2.5">
+                <span class="grid h-4.5 w-4.5 shrink-0 place-items-center rounded-full bg-flag/10 font-mono text-[0.6rem] font-semibold text-flag">!</span>
+                <p class="font-mono text-[0.78rem] text-ink/85">{f}</p>
+              </div>
+            ))}
+            <div class="mt-3 flex items-center justify-between rounded-lg bg-verdict/[0.07] px-4 py-3">
+              <span class="font-mono text-[0.66rem] uppercase tracking-[0.14em] text-verdict">Est. annual savings</span>
+              <span class="display text-lg font-bold text-verdict tnum">$6,900+</span>
+            </div>
+          </div>
+        </div>
+      </ExhibitCard>
+      <div class="max-w-lg" data-reveal>
+        <h3 class="display h3 text-ink">The report is the pitch. There isn't another one.</h3>
+        <p class="body-copy mt-4 text-inksoft">
+          No discovery call to get a number. No quote that needs a signature first. The audit shows
+          its work: what each clause says, what it costs you, and what the same volume would cost on
+          better terms. What you do with that is up to you.
+        </p>
+        <a href="/audit" class="btn btn-primary mt-7" data-magnetic>Run my audit</a>
+      </div>
+    </div>
+  </section>
+
+  <SectionDivider />
+
+  <!-- ============ COMPARISON ============ -->
+  <section id="comparison" class="container-page section-pad">
+    <div class="max-w-2xl">
+      <p class="eyebrow" data-reveal>The contrast</p>
+      <h2 class="display h2 mt-3 text-ink" data-reveal>The contract you signed vs the standard we place into.</h2>
+      <p class="lede mt-5" data-reveal>
+        We broker with factors whose terms survive their own audit. If your contract already looks
+        like the right-hand column, keep it. We will tell you exactly that.
+      </p>
+    </div>
+    <div class="mt-12">
+      <ComparisonTable
+        rows={comparisonRows}
+        footnote="Left column: contract mechanics documented in current published factor terms and a real SEC-filed factoring agreement. Right column: the standard we require of placement partners; exact terms depend on your volume and industry and are confirmed in writing before you sign anything."
+      />
+    </div>
+  </section>
+
+  <!-- ============ INDUSTRIES ============ -->
+  <section id="industries" class="container-page section-pad !pt-0">
+    <div class="max-w-2xl">
+      <p class="eyebrow" data-reveal>Who this is for</p>
+      <h2 class="display h2 mt-3 text-ink" data-reveal>Built for the businesses that factor.</h2>
+    </div>
+    <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4" data-reveal-group>
+      {industries.map((ind) => (
+        <a href="/audit" class="industry-card sheet group flex flex-col overflow-clip no-underline transition-shadow duration-300 hover:shadow-lift" data-tilt="3">
+          <div class="card-media grain relative">
+            <Pic name={ind.img} alt={`${ind.name}: a business owner in their working environment`} imgClass="aspect-[3/2] w-full object-cover" sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" />
+          </div>
+          <div class="flex flex-1 flex-col p-5">
+            <h3 class="display text-[1.1rem] font-semibold text-ink">{ind.name}</h3>
+            <p class="body-copy mt-1.5 flex-1 text-[0.9rem] text-inksoft">{ind.line}</p>
+            <span class="mt-4 font-mono text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-flag">
+              Audit my contract <span class="inline-block transition-transform duration-200 group-hover:translate-x-1">&rarr;</span>
+            </span>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <!-- ============ PROOF BAND (navy) ============ -->
+  <StatBand>
+    <div class="max-w-2xl">
+      <p class="eyebrow !text-marker" data-reveal>In the industry's own words</p>
+      <h2 class="display h2 mt-3 text-cream" data-reveal>We didn't invent the problem. The industry wrote it down.</h2>
+    </div>
+
+    <div class="mt-12 grid gap-8 md:grid-cols-3" data-reveal-group>
+      <div>
+        <p class="display text-[2.6rem] font-bold text-marker tnum"><span data-countup="2.5" data-decimals="1" data-suffix="%" data-duration="1.6">0%</span><span class="text-lg font-semibold text-cream/70"> /mo</span></p>
+        <p class="body-copy mt-1 text-cream/80">the average headline factoring rate</p>
+        <p class="mt-2 font-mono text-[0.65rem] uppercase tracking-[0.12em] text-cream/50">Corpay, published rate data</p>
+      </div>
+      <div>
+        <p class="display text-[2.6rem] font-bold text-marker tnum"><span data-countup="30" data-suffix="%" data-duration="1.8">0%</span></p>
+        <p class="body-copy mt-1 text-cream/80">effective APR in the industry's own worked example of that headline</p>
+        <p class="mt-2 font-mono text-[0.65rem] uppercase tracking-[0.12em] text-cream/50">Corpay's published example, 2.5% fee at 85% advance</p>
+      </div>
+      <div>
+        <p class="display text-[2.6rem] font-bold text-marker tnum"><span data-countup="11" data-duration="1.4">0</span></p>
+        <p class="body-copy mt-1 text-cream/80">states that now force APR-style cost disclosure on factoring offers</p>
+        <p class="mt-2 font-mono text-[0.65rem] uppercase tracking-[0.12em] text-cream/50">state commercial financing disclosure laws</p>
+      </div>
+    </div>
+
+    <div class="mt-14 grid gap-8 md:grid-cols-2">
+      <ExhibitCard tilt="l" stamp="THEIR WORDS">
+        <p class="mono-quote text-ink/90">
+          "A factor truly has immediate and unlimited powers to protect [its] interests. These
+          rights can cripple and mortally wound a business within days."
+        </p>
+        <p class="mt-4 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-inksoft">
+          A broker training manual used inside the factoring industry, 11th edition
+        </p>
+      </ExhibitCard>
+      <ExhibitCard tilt="r" stamp="THEIR WORDS">
+        <p class="mono-quote text-ink/90">
+          "Certain prospects feel that a factor simply has too much control in the relationship.
+          They are correct."
+        </p>
+        <p class="mt-4 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-inksoft">
+          The same manual, on client control
+        </p>
+      </ExhibitCard>
+    </div>
+  </StatBand>
+
+  <!-- ============ FAQ ============ -->
+  <section id="faq" class="container-page section-pad">
+    <div class="max-w-2xl">
+      <p class="eyebrow" data-reveal>Questions owners actually ask</p>
+      <h2 class="display h2 mt-3 text-ink" data-reveal>Straight answers first.</h2>
+    </div>
+    <div class="mt-10 max-w-3xl">
+      <FaqBlock items={faq} />
+    </div>
+  </section>
+
+  <!-- ============ FINAL CTA ============ -->
+  <section class="container-page section-pad !pt-4">
+    <div class="max-w-2xl">
+      <h2 class="display h2 text-ink" data-reveal>If the numbers make you sick, we handle the exit.</h2>
+      <p class="lede mt-5" data-reveal>
+        Buyout math checked against your statements. Notice sent inside the window. Release letter
+        and UCC termination managed. A landing spot whose terms cannot trap you. And if your audit
+        comes back clean, you will know you are in a fair deal. That is worth a minute too.
+      </p>
+    </div>
+    <div class="mt-10">
+      <AuditCta />
+    </div>
+  </section>
+</Base>
+
+<style>
+  .xray-active {
+    opacity: 1 !important;
+    border-left-color: var(--color-marker) !important;
+  }
+</style>

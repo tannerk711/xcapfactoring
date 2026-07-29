@@ -1,0 +1,31 @@
+{
+  "hero-desk": {
+    "width": 1440,
+    "height": 1088,
+    "lqip": "data:image/webp;base64,UklGRpAAAABXRUJQVlA4IIQAAAAQBQCdASocABUAPwlwslIrpiSisBgIAXAhCWIAtOgIY4vV34LdhmHDEx0/qNgUna4AAP21++sWhcZYilJsBRF49mY3QZ8WoQuoLBNz/u5oYcmXwkWCauadisqlRGrk9vy52j5PGd4YEAIXaWUxXiNsfGG+XpEOQhpXGso2qxtiHvhAAAA="
+  },
+  "texture-ledger": {
+    "width": 900,
+    "height": 900
+  },
+  "industry-trucking": {
+    "width": 980,
+    "height": 675,
+    "lqip": "data:image/webp;base64,UklGRngAAABXRUJQVlA4IGwAAAAwBQCdASocABMAPwFoq0+rJaOiMAwBYCAJYwC/7B3507EAvVye72021ckUybWHKJmPgADNYjHZ5R4SbeCbOKiQ1yrGlNEIJsIGD3vjTUqqlxylRGui1k6c8hvk5+lLSVJCAOPO/3l0nj46AAA="
+  },
+  "industry-staffing": {
+    "width": 980,
+    "height": 675,
+    "lqip": "data:image/webp;base64,UklGRoIAAABXRUJQVlA4IHYAAADwBACdASocABMAPwl0sE+rpySiMAgBcCEJYwC7ACFpbhwSo042KSKKSyu2tb/lVkAA/ujb2af24jAaia6L9T4ucOvYmylwCKu8TTiUNazJ3iSla8qLIOoqNx+6EbGkC3t/ZVAtVijpFuHGIXx2MHc3M68BvoAA"
+  },
+  "industry-manufacturing": {
+    "width": 980,
+    "height": 675,
+    "lqip": "data:image/webp;base64,UklGRn4AAABXRUJQVlA4IHIAAAAQBQCdASocABMAPwl6s1Mrp6SiqAqpcCEJQBOmUAArX8ZVItd3d3asxfGC63hlmOfAAP7nOwRvFtznQwkON2lO/Hv7vQccCMC3FKHdqjnavSPO3HykSox4hS2UHwuG86d8sUP5cD1TAUICYu3XHjsEwAA="
+  },
+  "industry-construction": {
+    "width": 980,
+    "height": 675,
+    "lqip": "data:image/webp;base64,UklGRo4AAABXRUJQVlA4IIIAAAAQBQCdASocABMAPwl4tVMrpyUiqAqpcCEJZACdAA0JQZnCxdSVSpQBuaXyIZ2VnSiAAO9wONYWrmSWFiteLqq36uL3csJJqiP5exMa6u7eDgSNnieb9yPx47Fk1FcoU4Vlq2pNDYni6VZqDycPoyw1UG9ZFZAbNra3CtYMOI6SNMgA"
+  }
+}

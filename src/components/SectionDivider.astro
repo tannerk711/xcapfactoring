@@ -1,0 +1,11 @@
+---
+// Thin ledger rule that draws itself in as it enters the viewport.
+interface Props {
+  class?: string;
+}
+const { class: className = '' } = Astro.props;
+---
+
+<div class={`container-page ${className}`} aria-hidden="true">
+  <div class="rule-draw" data-rule-draw></div>
+</div>

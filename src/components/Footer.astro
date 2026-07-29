@@ -1,0 +1,44 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="border-t border-rule bg-cream">
+  <div class="container-page py-14">
+    <div class="grid gap-10 md:grid-cols-[1.4fr_1fr]">
+      <div>
+        <p class="display text-xl font-bold text-ink">
+          X<span class="text-verdict">CAP</span>
+          <span class="ml-1 font-mono text-[0.6rem] font-semibold uppercase tracking-[0.22em] text-inksoft">Factoring</span>
+        </p>
+        <p class="body-copy mt-3 max-w-md text-inksoft">
+          We read factoring contracts for the businesses that signed them. Free audit, your true
+          effective rate, and a straight answer on whether better terms exist for you.
+        </p>
+      </div>
+      <nav class="flex flex-col gap-2 md:items-end" aria-label="Footer">
+        <a href="/" class="nav-link w-fit">Home</a>
+        <a href="/audit" class="nav-link w-fit">Free contract audit</a>
+        <a href="/privacy" class="nav-link w-fit">Privacy</a>
+      </nav>
+    </div>
+
+    <div class="mt-10 border-t border-rule pt-6">
+      <div class="flex flex-col gap-3 font-mono text-[0.72rem] leading-relaxed text-inksoft">
+        <p>
+          XCap Factoring is a commercial finance broker, not a factor and not a lender. We audit
+          factoring agreements, compare terms, and place businesses with factoring companies in our
+          network. We do not fund invoices ourselves.
+        </p>
+        <p>
+          Audit results are automated estimates based on the document you provide and are subject
+          to human confirmation. They are not a binding quote, not legal advice, and not accounting
+          or tax advice. Consult an attorney before terminating or signing any agreement.
+        </p>
+        <p>
+          {/* DBA wording pending Przemek confirmation (Phase 0). Best-known form below. */}
+          XCap Factoring, a DBA of XCap Funding. &copy; {year} All rights reserved.
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>

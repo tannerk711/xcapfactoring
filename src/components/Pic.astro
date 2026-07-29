@@ -1,0 +1,31 @@
+---
+// Responsive <picture> for the generated image set (avif/webp/jpg + manifest dimensions).
+import manifest from '../data/images.json';
+
+interface Props {
+  name: keyof typeof manifest;
+  alt: string;
+  class?: string;
+  imgClass?: string;
+  sizes?: string;
+  eager?: boolean;
+}
+const { name, alt, class: className = '', imgClass = '', sizes = '(min-width: 768px) 50vw, 100vw', eager = false } = Astro.props;
+const meta = manifest[name] as { width: number; height: number; lqip?: string };
+---
+
+<picture class={className}>
+  <source srcset={`/img/${name}.avif`} type="image/avif" />
+  <source srcset={`/img/${name}.webp`} type="image/webp" />
+  <img
+    src={`/img/${name}.jpg`}
+    alt={alt}
+    width={meta.width}
+    height={meta.height}
+    class={imgClass}
+    sizes={sizes}
+    loading={eager ? 'eager' : 'lazy'}
+    decoding="async"
+    style={meta.lqip && !eager ? `background-image:url(${meta.lqip});background-size:cover;` : undefined}
+  />
+</picture>

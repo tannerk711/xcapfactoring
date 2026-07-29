@@ -1,0 +1,20 @@
+---
+// Results page: the same island in results mode. Server-rendered (the jobId is
+// dynamic), noindexed, and the report itself is fetched client-side by jobId.
+import Base from '../../../layouts/Base.astro';
+import AuditFlow from '../../../islands/AuditFlow';
+
+export const prerender = false;
+
+const { jobId } = Astro.params;
+const valid = typeof jobId === 'string' && /^[A-Za-z0-9_-]{21}$/.test(jobId);
+if (!valid) {
+  return Astro.redirect('/audit', 302);
+}
+---
+
+<Base title="Your Contract Audit | XCap Factoring" description="Your factoring contract audit results." noindex>
+  <main style="min-height: 60vh;">
+    <AuditFlow client:load mode="results" jobId={jobId} />
+  </main>
+</Base>

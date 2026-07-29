@@ -1,0 +1,39 @@
+{
+  "name": "xcap-factoring-site",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev --port 4321",
+    "build": "astro build",
+    "preview": "astro preview",
+    "prep:fonts": "node scripts/prep-fonts.mjs",
+    "prep:images": "node scripts/prep-images.mjs",
+    "test:math": "node scripts/test-rate-math.mjs",
+    "test:extraction": "node scripts/test-extraction.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
+    "@astrojs/react": "^4.4.0",
+    "@astrojs/vercel": "^8.2.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "@vercel/blob": "^2.0.0",
+    "@vercel/functions": "^3.1.0",
+    "astro": "^5.15.0",
+    "gsap": "^3.13.0",
+    "mammoth": "^1.11.0",
+    "nanoid": "^5.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.1.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@fontsource-variable/archivo": "^5.2.0",
+    "@fontsource/public-sans": "^5.2.0",
+    "@fontsource/spline-sans-mono": "^5.2.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "sharp": "^0.34.0"
+  }
+}

@@ -1,0 +1,70 @@
+---
+// Minimal launch privacy policy. Includes the two audit-tool-specific
+// disclosures the spec requires: AI-assisted review + contract retention.
+// Copy status: DRAFT pending brand-voice pass and counsel review.
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="Privacy Policy | XCap Factoring"
+  description="How XCap Factoring handles your contact details and uploaded contracts."
+>
+  <main class="section-pad">
+    <div class="container-page max-w-2xl">
+      <p class="eyebrow mb-2">Privacy</p>
+      <h1 class="display h2 mb-8">Privacy policy</h1>
+
+      <div class="space-y-8 body-copy">
+        <section>
+          <h2 class="display h3 mb-2">What we collect</h2>
+          <p>
+            When you run a contract audit we collect your name, email, phone number, and the contract file you upload. That is
+            the whole list. We do not run a credit pull and we do not ask for financials.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="display h3 mb-2">How your contract is used</h2>
+          <p>
+            Your contract is used only to prepare your audit and the human follow-up on it. It is stored privately, is never
+            shared with third parties, and is never shown to other visitors. The audit report you see never names your current
+            factoring company.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="display h3 mb-2">AI-assisted review</h2>
+          <p>
+            An AI system assists the first pass of your audit: it reads the document and extracts the terms, and our own
+            software computes the numbers. Uploaded documents are processed through the Anthropic API under its standard
+            commercial terms; Anthropic does not use API data to train its models. A human reviews the findings before anything
+            is confirmed to you.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="display h3 mb-2">Retention</h2>
+          <p>
+            Uploaded contracts and audit records are kept for up to 90 days and then deleted automatically, unless we are
+            actively working on a placement for you. Want it gone sooner? Ask, and we delete it on request.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="display h3 mb-2">How we contact you</h2>
+          <p>
+            We contact you about your audit using the details you submitted, only with the consent you gave on the form. Reply
+            or ask at any time to stop hearing from us.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="display h3 mb-2">Questions or deletion requests</h2>
+          <p>
+            Use the contact details in the footer. Deletion requests are honored, no questions asked.
+          </p>
+        </section>
+      </div>
+    </div>
+  </main>
+</Base>

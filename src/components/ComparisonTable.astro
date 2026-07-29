@@ -1,0 +1,63 @@
+---
+// The recurring two-column proof block: predatory standard vs the standard we place into.
+interface Row {
+  label: string;
+  bad: string;
+  good: string;
+  stamp?: string; // rubber stamp on the bad cell
+}
+interface Props {
+  rows: Row[];
+  badTitle?: string;
+  goodTitle?: string;
+  footnote?: string;
+}
+const { rows, badTitle = 'The predatory standard', goodTitle = 'The standard we place into', footnote } = Astro.props;
+---
+
+<div class="sheet overflow-clip">
+  <div class="hidden gap-0 border-b border-rule md:grid md:grid-cols-[0.9fr_1.15fr_1.15fr]">
+    <div class="px-6 py-4"></div>
+    <div class="border-l border-rule bg-flag/[0.045] px-6 py-4">
+      <p class="eyebrow">{badTitle}</p>
+    </div>
+    <div class="border-l border-rule bg-verdict/[0.05] px-6 py-4">
+      <p class="eyebrow" style="color: var(--color-verdict)">{goodTitle}</p>
+    </div>
+  </div>
+
+  {rows.map((row) => (
+    <div class="ledger-row grid last:border-b-0 md:grid-cols-[0.9fr_1.15fr_1.15fr]" data-compare-row>
+      <div class="px-6 pt-5 md:py-6">
+        <p class="font-mono text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-inksoft">{row.label}</p>
+      </div>
+      <div class="relative px-6 py-3 md:border-l md:border-rule md:bg-flag/[0.045] md:py-6">
+        <p class="eyebrow mb-1 !text-[0.6rem] md:hidden">{badTitle}</p>
+        <div class="flex items-start gap-2.5">
+          <svg class="mt-0.5 h-[18px] w-[18px] shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <circle cx="10" cy="10" r="8.4" stroke="#C0392B" stroke-width="1.6" />
+            <path d="M7 7l6 6M13 7l-6 6" stroke="#C0392B" stroke-width="1.6" stroke-linecap="round" data-draw-path />
+          </svg>
+          <p class="body-copy text-ink/85">{row.bad}</p>
+        </div>
+        {row.stamp && <span class="stamp absolute -top-1 right-4 bg-sheet md:top-3" data-compare-stamp>{row.stamp}</span>}
+      </div>
+      <div class="px-6 py-3 pb-5 md:border-l md:border-rule md:bg-verdict/[0.05] md:py-6">
+        <p class="eyebrow mb-1 !text-[0.6rem] md:hidden" style="color: var(--color-verdict)">{goodTitle}</p>
+        <div class="flex items-start gap-2.5">
+          <svg class="mt-0.5 h-[18px] w-[18px] shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <circle cx="10" cy="10" r="8.4" stroke="#1E7A54" stroke-width="1.6" />
+            <path d="M6.2 10.4l2.6 2.6 5-5.6" stroke="#1E7A54" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" data-draw-path />
+          </svg>
+          <p class="body-copy text-ink/85">{row.good}</p>
+        </div>
+      </div>
+    </div>
+  ))}
+
+  {footnote && (
+    <div class="border-t border-rule bg-paper/60 px-6 py-4">
+      <p class="font-mono text-[0.7rem] leading-relaxed text-inksoft">{footnote}</p>
+    </div>
+  )}
+</div>

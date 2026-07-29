@@ -1,0 +1,115 @@
+---
+// The DOM-built contract sheet. Zero image weight, crisp at every DPI, and the same
+// visual language powers the hero, the pinned X-ray demo, and the tool's processing screen.
+// variant "hero": one pre-highlighted clause + stamp, scan sweep on load, pointer tilt.
+// variant "xray": 4 flag clauses wired for the pinned ScrollTrigger timeline via data attrs.
+interface Props {
+  variant: 'hero' | 'xray';
+  class?: string;
+}
+const { variant, class: className = '' } = Astro.props;
+
+type L =
+  | { t: 'head'; w: number }
+  | { t: 'line'; w: number; soft?: boolean }
+  | { t: 'clause'; w: number; id: number }
+  | { t: 'gap' }
+  | { t: 'sig' };
+
+const heroLines: L[] = [
+  { t: 'head', w: 44 },
+  { t: 'gap' },
+  { t: 'line', w: 96 },
+  { t: 'line', w: 90 },
+  { t: 'line', w: 94 },
+  { t: 'line', w: 64 },
+  { t: 'gap' },
+  { t: 'line', w: 88 },
+  { t: 'clause', w: 92, id: 0 },
+  { t: 'clause', w: 71, id: 0 },
+  { t: 'line', w: 90 },
+  { t: 'gap' },
+  { t: 'line', w: 93, soft: true },
+  { t: 'line', w: 86, soft: true },
+  { t: 'line', w: 90, soft: true },
+  { t: 'line', w: 42, soft: true },
+  { t: 'gap' },
+  { t: 'sig' },
+];
+
+const xrayLines: L[] = [
+  { t: 'head', w: 40 },
+  { t: 'gap' },
+  { t: 'line', w: 95 },
+  { t: 'clause', w: 92, id: 0 },
+  { t: 'clause', w: 58, id: 0 },
+  { t: 'line', w: 90 },
+  { t: 'gap' },
+  { t: 'line', w: 88 },
+  { t: 'clause', w: 94, id: 1 },
+  { t: 'line', w: 91 },
+  { t: 'gap' },
+  { t: 'clause', w: 87, id: 2 },
+  { t: 'clause', w: 66, id: 2 },
+  { t: 'line', w: 93, soft: true },
+  { t: 'line', w: 89, soft: true },
+  { t: 'gap' },
+  { t: 'line', w: 92, soft: true },
+  { t: 'clause', w: 90, id: 3 },
+  { t: 'clause', w: 44, id: 3 },
+  { t: 'line', w: 85, soft: true },
+  { t: 'gap' },
+  { t: 'sig' },
+];
+
+const lines = variant === 'hero' ? heroLines : xrayLines;
+// Stamp copy for the 4 X-ray clauses, in clause order.
+const xrayStamps = ['RATE TIER', '30-DAY MIN', 'FLOAT DAYS', 'EXIT WINDOW'];
+const stampPos = ['top-[13%] right-[6%]', 'top-[36%] right-[10%]', 'top-[52%] right-[5%]', 'top-[78%] right-[9%]'];
+---
+
+<div
+  class={`contract-sheet overflow-clip ${className}`}
+  data-tilt={variant === 'hero' ? '6' : undefined}
+  data-xray-sheet={variant === 'xray' ? '' : undefined}
+  style="--scan-dist: 100%"
+>
+  {/* scan line: CSS one-shot for hero, GSAP-scrubbed for xray */}
+  <div class={variant === 'hero' ? 'scanline scan-on-load' : 'scanline'} data-xray-scan={variant === 'xray' ? '' : undefined} style={variant === 'hero' ? '--scan-dist: 620px' : undefined}></div>
+
+  <div class="relative flex h-full flex-col gap-[9px] p-6 md:p-8">
+    {lines.map((l) => {
+      if (l.t === 'gap') return <div class="h-[7px]"></div>;
+      if (l.t === 'head') return <div class="contract-heading" style={`width:${l.w}%`}></div>;
+      if (l.t === 'sig')
+        return (
+          <div class="mt-auto flex items-end justify-between pt-3">
+            <svg width="92" height="26" viewBox="0 0 92 26" fill="none" aria-hidden="true">
+              <path d="M3 19c8-12 12-14 14-9s-4 12 2 11 9-13 14-12 1 13 7 12 8-9 13-9 4 8 10 7 12-6 26-4" stroke="#101D33" stroke-width="1.4" stroke-linecap="round" opacity="0.7" />
+              <path d="M2 23h88" stroke="#101D33" stroke-width="1" opacity="0.35" />
+            </svg>
+            <div class="h-9 w-9 rounded-full border-[2.5px] border-flag/50"></div>
+          </div>
+        );
+      if (l.t === 'clause')
+        return (
+          <div
+            class={`clause-hl ${variant === 'hero' ? 'hl-on' : ''}`}
+            data-xray-clause={variant === 'xray' ? String(l.id) : undefined}
+          >
+            <div class="contract-line" style={`width:${l.w}%`}></div>
+          </div>
+        );
+      return <div class={`contract-line ${l.soft ? 'contract-line-soft' : ''}`} style={`width:${l.w}%`}></div>;
+    })}
+
+    {variant === 'hero' && <span class="stamp absolute right-[8%] top-[38%] bg-sheet/90">FLAG</span>}
+
+    {variant === 'xray' &&
+      xrayStamps.map((s, i) => (
+        <span class={`stamp absolute bg-sheet/90 ${stampPos[i]}`} data-xray-stamp={String(i)}>
+          {s}
+        </span>
+      ))}
+  </div>
+</div>

@@ -1,0 +1,21 @@
+---
+// A white "exhibit sheet": slightly rotated paper card with optional rubber stamp.
+// Used for contract excerpts, quotes, and any evidence-flavored content.
+interface Props {
+  tilt?: 'l' | 'r';
+  stamp?: string;
+  stampTone?: 'flag' | 'green';
+  class?: string;
+}
+const { tilt, stamp, stampTone = 'flag', class: className = '' } = Astro.props;
+const tiltClass = tilt === 'l' ? 'exhibit-l' : tilt === 'r' ? 'exhibit-r' : '';
+---
+
+<div class={`exhibit ${tiltClass} ${className}`}>
+  {stamp && (
+    <span class={`stamp ${stampTone === 'green' ? 'stamp-green' : ''} absolute -top-3 right-4 bg-sheet`}>{stamp}</span>
+  )}
+  <div class="p-6 md:p-7">
+    <slot />
+  </div>
+</div>

@@ -1,0 +1,29 @@
+---
+// Inline audit CTA block. Every content page carries one; the homepage closes with one.
+interface Props {
+  title?: string;
+  body?: string;
+  button?: string;
+  compact?: boolean;
+}
+const {
+  title = 'See what your contract really says.',
+  body = 'Upload it. In about a minute you get your true effective rate, the clauses working against you, and an honest answer on whether better terms exist for you.',
+  button = 'Audit my contract',
+  compact = false,
+} = Astro.props;
+---
+
+<div class={`sheet relative overflow-clip ${compact ? 'p-7 md:p-9' : 'p-8 md:p-12'}`} data-reveal>
+  <div class="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-marker/20 blur-2xl" aria-hidden="true"></div>
+  <div class="relative z-10 flex flex-col items-start gap-5 md:flex-row md:items-center md:justify-between md:gap-10">
+    <div class="max-w-xl">
+      <h3 class="display h3 text-ink">{title}</h3>
+      <p class="body-copy mt-2 text-inksoft">{body}</p>
+    </div>
+    <div class="flex shrink-0 flex-col items-start gap-2">
+      <a href="/audit" class="btn btn-primary" data-magnetic>{button}</a>
+      <p class="font-mono text-[0.7rem] tracking-wide text-inksoft">Free. Confidential. We are not a factor.</p>
+    </div>
+  </div>
+</div>
