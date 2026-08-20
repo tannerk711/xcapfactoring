@@ -47,7 +47,9 @@ await emit('texture-ledger', raw('texture-ledger.png'), {
 });
 
 // Industry cards render ~560px wide; 980w covers retina.
-for (const n of ['industry-trucking', 'industry-staffing', 'industry-manufacturing', 'industry-construction']) {
+// industry-government added 2026-08-18 (replaces construction in the homepage grid);
+// industry-construction stays emitted for the future /industries/construction page.
+for (const n of ['industry-trucking', 'industry-staffing', 'industry-government', 'industry-manufacturing', 'industry-construction']) {
   await emit(n, raw(`${n}.png`), { width: 980, lqip: true, pre: warmPaper });
 }
 

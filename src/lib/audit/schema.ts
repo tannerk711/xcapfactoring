@@ -31,7 +31,32 @@ export const ExtractionSchema = z.object({
     found: Found,
     description: nStr,
     amount_usd: nNum,
+    // 2026-08-05 (Darren): the flag is FORCED minimums. 'yes' only when a
+    // shortfall penalty / true-up applies for missing the number.
+    forced_with_penalty: Found,
   }),
+  // 2026-08-05 additions: advance timing ("when the meter starts") + funding speed.
+  advance_timing: z.object({
+    found: Found,
+    // 'no' = advance and fee accrual are forced at invoice purchase, no
+    // draw-on-request mechanism. 'yes' = client schedules/requests draws.
+    client_controls_timing: Found,
+    description: nStr,
+  }),
+  funding_speed: z.object({
+    found: Found,
+    stated_timeline: nStr,
+    business_days_min: nNum,
+    same_day_available: Found,
+    same_day_surcharge_usd: nNum,
+  }),
+
+  // ---- named junk fees (2026-08-05, Darren's list; also swept into ancillary_fees)
+  monitoring_fee: z.object({ found: Found, amount_usd: nNum, quote: nStr }),
+  wire_fee_usd: nNum,
+  ach_fee_usd: nNum,
+  new_debtor_credit_fee: z.object({ found: Found, amount_usd: nNum, quote: nStr }),
+  due_diligence_fee: z.object({ found: Found, amount_usd: nNum, quote: nStr }),
 
   // ---- term and exit (weight heaviest for switchers)
   term_months: nNum,

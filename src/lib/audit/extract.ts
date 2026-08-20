@@ -1,10 +1,13 @@
 // The extraction call + the background pipeline. The model extracts terms
-// (claude-opus-5, structured outputs via messages.parse + zodOutputFormat);
-// TypeScript computes every number the visitor sees (rate-math.ts).
-// Locked call shape: thinking is on by default on claude-opus-5 so NO thinking
-// param; output_config carries effort medium + the zod format; the PDF goes in
-// as a base64 document block BEFORE the text block; stop_reason refusal and
-// max_tokens are handled before content is read.
+// (claude-opus-5); TypeScript computes every number the visitor sees
+// (rate-math.ts). The full extraction schema exceeds the API's structured-output
+// grammar budget ("compiled grammar is too large", verified 2026-08-20 in every
+// arrangement), so the schema is enforced LOCALLY: the JSON Schema goes in the
+// prompt, the response is validated with ExtractionSchema.safeParse, and one
+// repair retry feeds the validation errors back. Locked call shape: thinking is
+// on by default on claude-opus-5 so NO thinking param; output_config carries
+// effort medium; the PDF goes in as a base64 document block BEFORE the text
+// block; stop_reason refusal and max_tokens are handled before content is read.
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import mammoth from 'mammoth';
@@ -24,6 +27,10 @@ Rules:
 - interest_base: "full_invoice_face" only if fees are computed on the invoice face amount; "amount_advanced" if on the advance; "unclear" otherwise.
 - headline_rate_pct is the single rate the client would quote if asked what they pay (usually the first-tier or advertised rate).
 - annual_volume_usd only if derivable from stated volumes, line size, or minimums; otherwise null.
+- monthly_minimum.forced_with_penalty: "yes" only when a shortfall penalty, true-up, or minimum-fee obligation applies for missing the minimum; "no" when a minimum exists without penalty; "unclear" otherwise.
+- advance_timing.client_controls_timing: "yes" only if the client may request or schedule advances at times of their choosing (draw-on-request or borrowing-base language); "no" if the agreement forces purchase/advance (and fee accrual) upon invoice submission with no request mechanism; "unclear" otherwise.
+- funding_speed: the stated timeline between advance request (or invoice purchase) and disbursement of funds. Fill business_days_min as a number when stated ("within two business days" is 2; "same day" is 0). Record same-day availability and any same-day surcharge.
+- Named fees, fill the dedicated fields AND include each in ancillary_fees: monitoring_fee (any recurring monthly monitoring/service/administration line item), wire_fee_usd and ach_fee_usd (per-transfer charges), new_debtor_credit_fee (credit-check or setup charge for onboarding a new customer/account debtor), due_diligence_fee (application, due diligence, or underwriting charges).
 - notable_quotes: verbatim clause text (with page number when identifiable) supporting each significant finding, especially termination, renewal, release, and guarantee clauses.
 - document_type: classify honestly. If this is not a factoring agreement or proposal, say so. If the document is illegible or truncated beyond usable, use "unreadable".
 - factor_name: the factoring company that is party to the agreement, if named.`;
@@ -95,18 +102,46 @@ export async function buildContentBlocks(files: { url: string }[]): Promise<Cont
   return blocks;
 }
 
-async function extractOnce(blocks: ContentBlock[]): Promise<Extraction> {
+// The wire JSON Schema, generated from the same zod schema that validates the
+// response, so prompt and validator can never drift.
+const EXTRACTION_JSON_SCHEMA = JSON.stringify(zodOutputFormat(ExtractionSchema).schema);
+
+/** Pull the JSON object out of the response text (tolerates fences/preamble). */
+function parseExtractionText(text: string): Extraction {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end <= start) {
+    throw new ExtractionFailure('no_output', 'no JSON object in response text');
+  }
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text.slice(start, end + 1));
+  } catch (e) {
+    throw new ExtractionFailure('no_output', `response is not valid JSON: ${e instanceof Error ? e.message : e}`);
+  }
+  const result = ExtractionSchema.safeParse(raw);
+  if (!result.success) {
+    const issues = result.error.issues
+      .slice(0, 12)
+      .map((i) => `${i.path.join('.')}: ${i.message}`)
+      .join('; ');
+    throw new ExtractionFailure('no_output', `schema validation failed: ${issues}`);
+  }
+  return result.data;
+}
+
+async function extractOnce(blocks: ContentBlock[], repairHint?: string): Promise<Extraction> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const response = await client.messages.parse({
+  const instruction =
+    `${EXTRACTION_INSTRUCTION}\n\nRespond with ONLY a single JSON object (no code fences, no commentary) that conforms exactly to this JSON Schema, with every property present:\n${EXTRACTION_JSON_SCHEMA}` +
+    (repairHint ? `\n\nYour previous attempt failed validation. Fix these issues and emit the corrected complete object: ${repairHint}` : '');
+  const response = await client.messages.create({
     model: auditConfig.model,
     max_tokens: auditConfig.extractionMaxTokens,
     system: EXTRACTION_SYSTEM,
-    output_config: {
-      effort: auditConfig.extractionEffort,
-      format: zodOutputFormat(ExtractionSchema),
-    },
+    output_config: { effort: auditConfig.extractionEffort },
     // Document/image blocks first, text instruction last (locked decision).
-    messages: [{ role: 'user', content: [...blocks, { type: 'text', text: EXTRACTION_INSTRUCTION }] }],
+    messages: [{ role: 'user', content: [...blocks, { type: 'text', text: instruction }] }],
   });
 
   if (response.stop_reason === 'refusal') {
@@ -115,19 +150,24 @@ async function extractOnce(blocks: ContentBlock[]): Promise<Extraction> {
   if (response.stop_reason === 'max_tokens') {
     throw new ExtractionFailure('max_tokens', 'extraction truncated at max_tokens');
   }
-  const parsed = response.parsed_output;
-  if (!parsed) throw new ExtractionFailure('no_output', 'no parsed output in response');
-  return parsed;
+  const text = response.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map((b) => b.text)
+    .join('');
+  if (!text.trim()) throw new ExtractionFailure('no_output', 'no text output in response');
+  return parseExtractionText(text);
 }
 
-/** Extraction with one retry on API error or refusal (spec section 4). */
+/** Extraction with one retry on API error, refusal, or validation failure (spec section 4). */
 export async function extractTerms(blocks: ContentBlock[]): Promise<Extraction> {
   try {
     return await extractOnce(blocks);
   } catch (err) {
     if (err instanceof ExtractionFailure && err.reason === 'unreadable_file') throw err;
     console.warn('[audit] extraction attempt 1 failed, retrying once:', err);
-    return await extractOnce(blocks);
+    const hint =
+      err instanceof ExtractionFailure && err.reason === 'no_output' ? err.message : undefined;
+    return await extractOnce(blocks, hint);
   }
 }
 

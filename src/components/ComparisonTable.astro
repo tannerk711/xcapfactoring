@@ -1,5 +1,7 @@
 ---
-// The recurring two-column proof block: predatory standard vs the standard we place into.
+// The recurring two-column proof block: "The standard" vs "The better contract".
+// Naming locked on the 2026-08-05 call: the standard way benefits the factor, not
+// the client; the good column is the better, never "the standard". No "predatory".
 interface Row {
   label: string;
   bad: string;
@@ -12,7 +14,7 @@ interface Props {
   goodTitle?: string;
   footnote?: string;
 }
-const { rows, badTitle = 'The predatory standard', goodTitle = 'The standard we place into', footnote } = Astro.props;
+const { rows, badTitle = 'The standard', goodTitle = 'The better contract', footnote } = Astro.props;
 ---
 
 <div class="sheet overflow-clip">

@@ -1,8 +1,10 @@
 ---
 // Homepage. Copy status: DRAFT PENDING BRAND-VOICE PASS (voice profile not yet extracted).
 // Gates applied: golden-rules (invite, show over tell, honesty floor), compliance-claims
-// (broker-not-factor, clauses-not-companies, every number sourced or labeled illustration),
-// avatar-matrix language, no em-dashes.
+// (broker-not-factor, clauses-not-companies, every number sourced or labeled illustration,
+// standard-vs-better framing, no "predatory"), avatar-matrix language, no em-dashes.
+// 2026-08-05 redline applied (context/homepage-redline-2026-08-05.md): red-flag checklist,
+// wedge mechanics x6, comparison retitled + 8 rows, pro forma section, industries swap.
 import Base from '../layouts/Base.astro';
 import ContractSheet from '../components/ContractSheet.astro';
 import ComparisonTable from '../components/ComparisonTable.astro';
@@ -12,6 +14,16 @@ import StatBand from '../components/StatBand.astro';
 import SectionDivider from '../components/SectionDivider.astro';
 import ExhibitCard from '../components/ExhibitCard.astro';
 import Pic from '../components/Pic.astro';
+
+const redFlags = [
+  'Is your rate over 1.5% a month?',
+  'Are fees charged on the full invoice, even the 10 to 15% you never received?',
+  'Do you pay an automatic 30 days, even when the invoice pays in a week?',
+  'Does the meter start the day you invoice, whether you needed the cash that day or not?',
+  'Does your money take 2 or 3 days to show up after you request it?',
+  'Are you forced to hit a monthly minimum to avoid a penalty?',
+  'Do monitoring fees, $19 wires, credit-check fees, or a due diligence charge show up on your statements?',
+];
 
 const faq = [
   {
@@ -24,11 +36,19 @@ const faq = [
   },
   {
     q: 'Do I have to factor every customer and every invoice?',
-    a: 'Only if your contract says so. Whole-ledger clauses require everything; selective contracts let you pick customers and invoices. Plenty of owners have never checked which one they signed. It is one of the first things we look for.',
+    a: 'Only if your contract says so. Whole-ledger clauses require everything; selective contracts let you pick customers and invoices. The best structure works like a line of credit: you choose which customers go into a borrowing base, then draw only the amount you need. Plenty of owners have never checked which one they signed. It is one of the first things we look for.',
+  },
+  {
+    q: 'Can I really get funded on work I have not invoiced yet?',
+    a: 'In some contracts, yes. It is called pro forma funding: an advance against completed, verified work (signed time cards, delivery confirmations) before your customer contract even allows you to invoice. It is not a pre-bill and not a loan against a promise; the work is done. Most factors will not offer it. For a staffing agency running payroll every two weeks against net-60 clients, it closes the exact gap that hurts most. If nobody ever told you this exists, that alone is worth an audit.',
   },
   {
     q: 'What does the audit cost?',
     a: 'Nothing, and that is not a teaser. We are a placement broker: if we place you with a better factor, that factor compensates us. If your contract is already competitive, we tell you so and you have lost a minute. Either way, you never get a bill for the audit.',
+  },
+  {
+    q: 'Does it cost anything to look at another factor?',
+    a: 'Here, no. Some factors charge due diligence fees that run as high as $2,500 just to consider you, and you can pay it and still get declined. That fee is a big part of why owners stop shopping their contract. The audit is free, and the factors we place with charge no due diligence fee. Looking should never cost you money.',
   },
   {
     q: 'Are you a factoring company?',
@@ -49,12 +69,12 @@ const industries = [
   {
     img: 'industry-staffing' as const,
     name: 'Staffing',
-    line: 'Weekly payroll against net-60 clients. Know exactly what the spread is costing you before renewal.',
+    line: 'Weekly payroll against net-60 clients. If your factor cannot fund completed work before you invoice, you are carrying a crunch you do not have to.',
   },
   {
-    img: 'industry-construction' as const,
-    name: 'Construction',
-    line: 'Pay-when-paid chains and retainage make factoring terms matter twice as much here.',
+    img: 'industry-government' as const,
+    name: 'Government contractors',
+    line: 'Agencies pay slow but the paperwork is solid, which makes these the invoices factors compete for. Know what your terms should look like before you sign.',
   },
   {
     img: 'industry-manufacturing' as const,
@@ -80,9 +100,24 @@ const comparisonRows = [
     good: 'A daily rate means a 7-day invoice costs 7 days.',
   },
   {
-    label: 'Which invoices you factor',
-    bad: 'Whole ledger. Every customer, every invoice, or the account is in breach.',
-    good: 'You pick the customers and the invoices.',
+    label: 'Which invoices, and how much',
+    bad: 'Whole ledger, full invoice, every time. Every customer, every invoice, or the account is in breach.',
+    good: 'You choose which customers go into your borrowing base, then draw any amount from zero to 90% of that AR. It works like a line of credit.',
+  },
+  {
+    label: 'When you get funded',
+    bad: 'The advance lands the next business day, or two or three days later.',
+    good: 'Same-day funding.',
+  },
+  {
+    label: 'When the meter starts',
+    bad: 'Fees start the day you invoice, even if payroll is not for two weeks.',
+    good: 'You schedule the advance for the day you actually need the money. The meter starts then.',
+  },
+  {
+    label: 'Fees on the statement',
+    bad: 'Monitoring fees, $19 wires, credit-check fees for new customers, due diligence charges up to $2,500.',
+    good: 'No due diligence fee. Wires near cost. No monitoring fee.',
   },
   {
     label: 'Getting out',
@@ -90,6 +125,13 @@ const comparisonRows = [
     good: 'A clean exit path, in writing, before you sign.',
     stamp: 'TRAP',
   },
+];
+
+const proformaTimeline = [
+  { date: 'Aug 1', label: 'You land the client', sub: 'Your crew starts the work.', hot: false },
+  { date: 'Aug 15', label: 'Payroll is due', sub: 'Time cards are in. The work is done and verified.', hot: true },
+  { date: 'Sep 1', label: 'You are finally allowed to invoice', sub: 'The standard factor could not touch this until now.', hot: false },
+  { date: '~Oct 1', label: 'Your customer pays', sub: 'Net-30 after the invoice date.', hot: false },
 ];
 ---
 
@@ -145,6 +187,42 @@ const comparisonRows = [
     </div>
   </section>
 
+  <!-- ============ AUTOMATIC RED FLAGS (the self-check) ============ -->
+  <section id="red-flags" class="container-page section-pad">
+    <div class="grid items-start gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
+      <div class="lg:sticky lg:top-24">
+        <p class="eyebrow" data-reveal>Automatic red flags</p>
+        <h2 class="display h2 mt-3 text-ink" data-reveal>Seven questions before anything else.</h2>
+        <p class="lede mt-5" data-reveal>
+          A quick self-check. These are the mechanics that quietly move money from your side of the
+          table to theirs, and the standard contract carries most of them.
+        </p>
+      </div>
+
+      <div class="sheet p-6 md:p-8" data-reveal>
+        <p class="font-mono text-[0.68rem] uppercase tracking-[0.16em] text-inksoft">Contract self-check</p>
+        <ul class="mt-6 grid gap-x-8 gap-y-5 md:grid-cols-2">
+          {redFlags.map((f) => (
+            <li class="flex items-start gap-3.5">
+              <svg class="mt-0.5 h-[22px] w-[22px] shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="1.5" y="1.5" width="21" height="21" rx="4" fill="#fff" stroke="#E3DED4" stroke-width="2" />
+                <path d="M6.6 7.3l10.8 9.8M16.9 6.6L6.9 17.2" stroke="#C0392B" stroke-width="2.1" stroke-linecap="round" data-draw-path />
+              </svg>
+              <p class="body-copy text-ink/90">{f}</p>
+            </li>
+          ))}
+        </ul>
+        <div class="mt-8 flex flex-col items-start gap-5 border-t border-rule pt-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+          <p class="body-copy max-w-md font-medium text-ink">
+            Answered yes to any of these? <span class="marker-h" data-marker>Or not sure what your contract actually
+            says?</span> That is exactly what the audit is for.
+          </p>
+          <a href="/audit" class="btn btn-primary shrink-0" data-magnetic>Audit my contract</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ THE WEDGE ============ -->
   <section id="wedge" class="relative overflow-clip">
     <div
@@ -154,7 +232,7 @@ const comparisonRows = [
       aria-hidden="true"
     >
     </div>
-    <div class="container-page section-pad relative z-10">
+    <div class="container-page section-pad relative z-10 !pt-0">
       <div class="max-w-2xl">
         <p class="eyebrow" data-reveal>The effective-rate gap</p>
         <h2 class="display h2 mt-3 text-ink" data-reveal>
@@ -166,7 +244,7 @@ const comparisonRows = [
         </p>
       </div>
 
-      <div class="mt-14 grid items-start gap-10 lg:grid-cols-[1fr_1.1fr]">
+      <div class="mt-14 grid items-start gap-10 lg:grid-cols-[1fr_1.15fr]">
         <!-- gauge + published example -->
         <div class="flex flex-col items-center" data-gauge data-reveal>
           <svg viewBox="0 0 300 190" class="w-full max-w-[340px]" aria-hidden="true">
@@ -197,35 +275,45 @@ const comparisonRows = [
           </ExhibitCard>
         </div>
 
-        <!-- the four mechanics -->
-        <div class="flex flex-col gap-4" data-reveal-group>
-          {[
-            {
-              t: 'The rate escalates',
-              d: '2% covers the first 30 days. Tiers stack after that: real contracts bill 2.7%, 3.5%, and beyond as the invoice ages.',
-            },
-            {
-              t: 'The fee is charged on the full invoice',
-              d: 'You received an 85 to 90% advance, but the percentage is computed on 100% of the face value. Money you never held, billed anyway.',
-            },
-            {
-              t: 'Fast invoices are billed slow',
-              d: 'A 30-day minimum charge means the invoice your customer paid in 7 days costs the same as one that dragged a month.',
-            },
-            {
-              t: 'Float days keep the meter running',
-              d: 'Two to ten "clearing" days of charges after the customer already paid. The industry’s own manual calls anything past 2 or 3 unreasonable.',
-            },
-          ].map((m, i) => (
-            <div class="sheet flex gap-5 p-6">
-              <span class="display mt-0.5 text-xl font-bold text-flag tnum">{String(i + 1).padStart(2, '0')}</span>
-              <div>
-                <h3 class="display text-[1.08rem] font-semibold text-ink">{m.t}</h3>
-                <p class="body-copy mt-1.5 text-inksoft">{m.d}</p>
+        <!-- the six mechanics -->
+        <div>
+          <div class="grid gap-4 sm:grid-cols-2" data-reveal-group>
+            {[
+              {
+                t: 'The rate escalates',
+                d: '2% covers the first 30 days. Tiers stack after that: real contracts bill 2.7%, 3.5%, and beyond as the invoice ages.',
+              },
+              {
+                t: 'The fee is charged on the full invoice',
+                d: 'You received an 85 to 90% advance, but the percentage is computed on 100% of the face value. Money you never held, billed anyway.',
+              },
+              {
+                t: 'Fast invoices are billed slow',
+                d: 'A 30-day minimum charge means the invoice your customer paid in 7 days costs the same as one that dragged a month.',
+              },
+              {
+                t: 'Float days keep the meter running',
+                d: 'Two to ten "clearing" days of charges after the customer already paid. The industry’s own manual calls anything past 2 or 3 unreasonable.',
+              },
+              {
+                t: 'The clock starts before you need the money',
+                d: 'The advance is pushed the day you invoice, whether payroll is Friday or two weeks out. You pay for money sitting in your account.',
+              },
+              {
+                t: 'The junk-fee stack',
+                d: 'Monthly monitoring fees, $19 wires, a credit-check fee for every new customer, due diligence charges. Line items with nothing to do with advancing you money.',
+              },
+            ].map((m, i) => (
+              <div class="sheet flex gap-4 p-5 md:p-6">
+                <span class="display mt-0.5 text-xl font-bold text-flag tnum">{String(i + 1).padStart(2, '0')}</span>
+                <div>
+                  <h3 class="display text-[1.05rem] font-semibold text-ink">{m.t}</h3>
+                  <p class="body-copy mt-1.5 text-[0.92rem] text-inksoft">{m.d}</p>
+                </div>
               </div>
-            </div>
-          ))}
-          <p class="mt-2 font-mono text-[0.7rem] leading-relaxed text-inksoft">
+            ))}
+          </div>
+          <p class="mt-6 font-mono text-[0.7rem] leading-relaxed text-inksoft">
             Mechanics documented in current published factor terms and a real SEC-filed factoring
             agreement. Shown as an illustration of how the math works, not a claim about any
             specific company. Your contract sets your numbers.
@@ -349,7 +437,7 @@ const comparisonRows = [
             </div>
           </div>
           <div class="flex flex-col gap-2.5 px-6 py-5">
-            {['Tiered escalation past day 30', 'Fee charged on full invoice face', '30-day minimum on fast payers'].map((f) => (
+            {['Tiered escalation past day 30', 'Fee charged on full invoice face', 'Forced monthly minimum'].map((f) => (
               <div class="flex items-center gap-2.5">
                 <span class="grid h-4.5 w-4.5 shrink-0 place-items-center rounded-full bg-flag/10 font-mono text-[0.6rem] font-semibold text-flag">!</span>
                 <p class="font-mono text-[0.78rem] text-ink/85">{f}</p>
@@ -376,21 +464,91 @@ const comparisonRows = [
 
   <SectionDivider />
 
-  <!-- ============ COMPARISON ============ -->
+  <!-- ============ COMPARISON: THE STANDARD VS THE BETTER ============ -->
   <section id="comparison" class="container-page section-pad">
     <div class="max-w-2xl">
       <p class="eyebrow" data-reveal>The contrast</p>
-      <h2 class="display h2 mt-3 text-ink" data-reveal>The contract you signed vs the standard we place into.</h2>
+      <h2 class="display h2 mt-3 text-ink" data-reveal>The standard contract vs the better one.</h2>
       <p class="lede mt-5" data-reveal>
-        We broker with factors whose terms survive their own audit. If your contract already looks
-        like the right-hand column, keep it. We will tell you exactly that.
+        Most factoring contracts are written the standard way, and the standard way benefits the
+        factor, not you. We broker with factors whose terms survive their own audit. If your
+        contract already looks like the right-hand column, keep it. We will tell you exactly that.
       </p>
     </div>
     <div class="mt-12">
       <ComparisonTable
         rows={comparisonRows}
-        footnote="Left column: contract mechanics documented in current published factor terms and a real SEC-filed factoring agreement. Right column: the standard we require of placement partners; exact terms depend on your volume and industry and are confirmed in writing before you sign anything."
+        footnote="Left column: contract mechanics documented in current published factor terms and a real SEC-filed factoring agreement. Right column: what we require of placement partners; exact terms depend on your volume and industry and are confirmed in writing before you sign anything."
       />
+    </div>
+  </section>
+
+  <!-- ============ PRO FORMA FUNDING ============ -->
+  <section id="pro-forma" class="container-page section-pad !pt-0">
+    <div class="max-w-2xl">
+      <p class="eyebrow" data-reveal>Pro forma funding</p>
+      <h2 class="display h2 mt-3 text-ink" data-reveal>
+        Funded on work you finished, before you are even allowed to invoice.
+      </h2>
+      <p class="lede mt-5" data-reveal>
+        The better contract has one move the standard one cannot copy, and staffing owners feel it
+        most. Owners who have factored for ten years are routinely never told this exists.
+      </p>
+    </div>
+
+    <div class="sheet mt-10 p-6 md:p-9" data-reveal>
+      <!-- the crunch bracket (desktop): spans payroll-due through customer-pays -->
+      <div class="relative mb-3 hidden h-11 md:block" aria-hidden="true">
+        <div class="absolute left-[calc(25%+11px)] right-[calc(25%-11px)] top-5 h-5 rounded-t-lg border-2 border-b-0 border-flag/70"></div>
+        <span class="absolute left-[calc(50%+11px)] top-0 -translate-x-1/2 whitespace-nowrap font-mono text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-flag">
+          The crunch: payroll due, invoice not allowed yet
+        </span>
+      </div>
+
+      <div class="relative">
+        <!-- rail: vertical on mobile, horizontal on md+ -->
+        <div class="absolute bottom-2 left-[11px] top-2 w-px bg-rule md:bottom-auto md:left-0 md:right-0 md:top-[11px] md:h-px md:w-auto" aria-hidden="true"></div>
+        <ol class="relative grid gap-8 md:grid-cols-4 md:gap-6">
+          {proformaTimeline.map((t) => (
+            <li class="flex items-start gap-4 md:block">
+              <span
+                class={`relative z-10 mt-0.5 grid h-[23px] w-[23px] shrink-0 place-items-center rounded-full border-2 ${
+                  t.hot ? 'border-verdict bg-verdict' : 'border-rule bg-sheet'
+                }`}
+              >
+                {t.hot && <span class="h-2 w-2 rounded-full bg-white"></span>}
+              </span>
+              <div class="md:mt-4">
+                <p class="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-inksoft">{t.date}</p>
+                <p class="body-copy mt-1 font-medium text-ink">{t.label}</p>
+                <p class="body-copy mt-0.5 text-[0.88rem] text-inksoft">{t.sub}</p>
+                {t.hot && (
+                  <span class="stamp stamp-green mt-3 bg-sheet" data-compare-stamp>Funded here</span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div class="mt-8 border-t border-rule pt-6">
+        <p class="body-copy max-w-3xl text-inksoft">
+          Pro forma funding advances against completed, verified work: time cards in, work
+          confirmed, money out. It is not a pre-bill and not a loan against a promise. The work is
+          done; the only thing missing is the calendar date your customer contract lets you print an
+          invoice. The majority of factors will not do this. The ones we place with do, in any
+          industry with clean proof of work, and staffing is where it changes everything.
+        </p>
+        <p class="display mt-7 max-w-3xl text-[1.25rem] font-semibold leading-snug text-ink md:text-[1.45rem]" data-reveal>
+          Ask any factor one question: <span class="marker-h" data-marker>can you advance on completed work, or do I
+          wait for the invoice?</span>
+        </p>
+        <p class="body-copy mt-3 text-inksoft" data-reveal>If the answer is wait, that is a red flag on its own.</p>
+        <div class="mt-7 flex flex-wrap items-center gap-4">
+          <a href="/audit" class="btn btn-primary" data-magnetic>Audit my contract</a>
+          <p class="font-mono text-[0.7rem] tracking-wide text-inksoft">Free. Confidential. We are not a factor.</p>
+        </div>
+      </div>
     </div>
   </section>
 

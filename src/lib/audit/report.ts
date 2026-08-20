@@ -122,14 +122,100 @@ export function buildFlags(x: Extraction, math: RateMathResult): RedFlag[] {
   }
 
   if (x.monthly_minimum.found === 'yes') {
+    const forced = x.monthly_minimum.forced_with_penalty === 'yes';
     flags.push({
       id: 'monthly_min',
-      severity: 'medium',
-      title: 'A monthly minimum regardless of your volume',
+      severity: forced ? 'high' : 'medium',
+      title: forced ? 'A forced monthly minimum' : 'A monthly minimum regardless of your volume',
       clauseQuote: q(x.monthly_minimum.description),
-      plainEnglish:
-        'Slow months still owe the factor its minimum, which makes your quiet season the most expensive money in the contract.',
+      plainEnglish: forced
+        ? 'Miss the number and you owe the shortfall anyway. If you factor everything you have, this may never bite; the clause exists for the months it does, and those are your slowest ones.'
+        : 'Slow months still owe the factor its minimum, which makes your quiet season the most expensive money in the contract.',
       goodStandard: 'Pay for what you factor. No shortfall penalty.',
+      estAnnualImpactUsdPer100k: null,
+    });
+  }
+
+  // ---- timing layer (2026-08-05: when the meter starts + funding speed)
+  if (x.advance_timing?.client_controls_timing === 'no') {
+    flags.push({
+      id: 'meter_start',
+      severity: 'medium',
+      title: 'The meter starts the day you invoice',
+      clauseQuote: q(x.advance_timing.description),
+      plainEnglish:
+        'Advances, and the fees on them, begin at invoice purchase whether you needed the cash that day or not. You pay to have money sit in your account before payroll is due.',
+      goodStandard:
+        'You schedule the advance for the day you actually need the money: payroll day, supplier day. The meter starts then.',
+      estAnnualImpactUsdPer100k: null,
+    });
+  }
+
+  const speed = x.funding_speed;
+  if (speed?.found === 'yes' && ((speed.business_days_min ?? 0) >= 2 || (speed.same_day_surcharge_usd ?? 0) > 0)) {
+    const surcharged = (speed.same_day_surcharge_usd ?? 0) > 0;
+    flags.push({
+      id: 'funding_speed',
+      severity: 'medium',
+      title: surcharged ? 'Same-day funding costs extra here' : 'Your money takes days to arrive',
+      clauseQuote: q(speed.stated_timeline),
+      plainEnglish: surcharged
+        ? `Getting your own receivable the day you ask carries a $${speed.same_day_surcharge_usd} surcharge. Speed is sold back to you as an add-on.`
+        : 'You request funds because you need them that day. A two or three day wait turns your own receivable into a scheduling problem.',
+      goodStandard: 'Same-day funding, no surcharge.',
+      estAnnualImpactUsdPer100k: null,
+    });
+  }
+
+  // ---- the junk-fee stack (2026-08-05, Darren's list)
+  if (x.monitoring_fee?.found === 'yes') {
+    flags.push({
+      id: 'monitoring_fee',
+      severity: 'medium',
+      title: `A monthly monitoring fee${x.monitoring_fee.amount_usd ? ` of $${x.monitoring_fee.amount_usd}` : ''}`,
+      clauseQuote: q(x.monitoring_fee.quote),
+      plainEnglish:
+        'A recurring line item for "monitoring" the account you already pay factoring fees on. It has nothing to do with advancing you money and everything to do with padding the bill.',
+      goodStandard: 'No monitoring fee.',
+      estAnnualImpactUsdPer100k: x.monitoring_fee.amount_usd ? Math.round(x.monitoring_fee.amount_usd * 12) : null,
+    });
+  }
+
+  if ((x.wire_fee_usd ?? 0) >= 15) {
+    flags.push({
+      id: 'wire_fees',
+      severity: 'medium',
+      title: `$${x.wire_fee_usd} wires`,
+      clauseQuote: null,
+      plainEnglish:
+        'A wire costs a fraction of this to send. Charged on every transfer, the spread quietly adds up to real money over a high-volume year.',
+      goodStandard: 'Wires near cost, or deposit options that skip the fee entirely.',
+      estAnnualImpactUsdPer100k: null,
+    });
+  }
+
+  if (x.new_debtor_credit_fee?.found === 'yes') {
+    flags.push({
+      id: 'onboarding_fee',
+      severity: 'medium',
+      title: `A fee every time you add a customer${x.new_debtor_credit_fee.amount_usd ? ` ($${x.new_debtor_credit_fee.amount_usd})` : ''}`,
+      clauseQuote: q(x.new_debtor_credit_fee.quote),
+      plainEnglish:
+        'Running credit on a new account debtor is the factor\'s own underwriting, billed to you. It is a tax on growing your book.',
+      goodStandard: 'New customers underwritten at no charge.',
+      estAnnualImpactUsdPer100k: null,
+    });
+  }
+
+  if (x.due_diligence_fee?.found === 'yes') {
+    flags.push({
+      id: 'due_diligence',
+      severity: 'medium',
+      title: `A due diligence fee${x.due_diligence_fee.amount_usd ? ` of $${x.due_diligence_fee.amount_usd}` : ''}`,
+      clauseQuote: q(x.due_diligence_fee.quote),
+      plainEnglish:
+        'You paid just to be looked at. Fees like this run as high as $2,500 in the market, sometimes just to get declined, and they are a big part of why owners never shop their contract.',
+      goodStandard: 'No due diligence fee. Looking should never cost you money.',
       estAnnualImpactUsdPer100k: null,
     });
   }
@@ -224,7 +310,8 @@ export function buildFlags(x: Extraction, math: RateMathResult): RedFlag[] {
       clauseQuote: null,
       plainEnglish:
         'Your 20-day payers fund the factor’s margin, and quietly holding invoices back is a default waiting to happen.',
-      goodStandard: 'You pick the customers and the invoices.',
+      goodStandard:
+        'You choose which customers go into your borrowing base and draw any amount from zero to 90% of that AR, like a line of credit.',
       estAnnualImpactUsdPer100k: null,
     });
   }

@@ -349,7 +349,7 @@ function ResultsView(props: { report: VisitorReport }) {
               <tr className="ledger-row" style={{ color: 'var(--color-inksoft)' }}>
                 <th className="py-2 font-medium">Invoice pays on day</th>
                 <th className="py-2 font-medium">Fee, % of invoice</th>
-                <th className="py-2 font-medium">Effective APR on cash</th>
+                <th className="py-2 font-medium">Effective annual rate on cash</th>
               </tr>
             </thead>
             <tbody className="tnum">

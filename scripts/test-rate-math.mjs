@@ -50,7 +50,14 @@ const baseExtraction = () => ({
   minimum_charge_days: null,
   float_days: null,
   batch_billing: 'no',
-  monthly_minimum: { found: 'no', description: null, amount_usd: null },
+  monthly_minimum: { found: 'no', description: null, amount_usd: null, forced_with_penalty: 'no' },
+  advance_timing: { found: 'no', client_controls_timing: 'unclear', description: null },
+  funding_speed: { found: 'no', stated_timeline: null, business_days_min: null, same_day_available: 'unclear', same_day_surcharge_usd: null },
+  monitoring_fee: { found: 'no', amount_usd: null, quote: null },
+  wire_fee_usd: null,
+  ach_fee_usd: null,
+  new_debtor_credit_fee: { found: 'no', amount_usd: null, quote: null },
+  due_diligence_fee: { found: 'no', amount_usd: null, quote: null },
   term_months: null,
   auto_renewal: { found: 'no', renewal_period_months: null, description: null },
   cancellation_window: {
@@ -203,6 +210,68 @@ const notFactoring = ExtractionSchema.parse({ ...baseExtraction(), document_type
 check('not_financing -> not_factoring status', buildReport(notFactoring).visitor.status, 'not_factoring');
 const unreadable = ExtractionSchema.parse({ ...baseExtraction(), document_type: 'unreadable', document_type_confidence_pct: 0 });
 check('unreadable -> unreadable status', buildReport(unreadable).visitor.status, 'unreadable');
+
+// ============================================================
+// 6. 2026-08-05 additions: better-contract behavior levers +
+//    the timing/junk-fee flag set (homepage checklist congruence)
+// ============================================================
+// Better-contract cost with the two levers, hand-computed:
+//   daily = 1.5% x 12 / 365 = 0.049315%/day
+//   30d scenario: 0.049315 x (30 x 0.85) x 0.90 (advance) x 0.90 (utilization) = 1.02% of face
+check('Better-contract cost @30d with levers = 1.02% of face', corpay30.goodFactorCostPctOfFace, 1.02, 0.01);
+check(
+  'Lever assumptions disclosed in report assumptions',
+  corpayMath.assumptions.some((a) => a.includes('85%') && a.includes('90%')),
+  true,
+);
+
+// Kitchen-sink fixture: every new flag fires + forced minimum promotes to high.
+const junky = ExtractionSchema.parse({
+  ...baseExtraction(),
+  fee_structure_type: 'flat',
+  flat_fee_pct: 2.5,
+  interest_base: 'full_invoice_face',
+  advance_rate_pct: 85,
+  headline_rate_pct: 2.5,
+  monthly_minimum: { found: 'yes', description: 'minimum monthly fees of $2,500; shortfall billed', amount_usd: 2500, forced_with_penalty: 'yes' },
+  advance_timing: { found: 'yes', client_controls_timing: 'no', description: 'Purchaser shall advance upon purchase of each invoice' },
+  funding_speed: { found: 'yes', stated_timeline: 'within three (3) business days of purchase', business_days_min: 3, same_day_available: 'no', same_day_surcharge_usd: null },
+  monitoring_fee: { found: 'yes', amount_usd: 95, quote: 'monthly monitoring fee of $95' },
+  wire_fee_usd: 19,
+  ach_fee_usd: 5,
+  new_debtor_credit_fee: { found: 'yes', amount_usd: 45, quote: 'credit review fee of $45 per new account debtor' },
+  due_diligence_fee: { found: 'yes', amount_usd: 2500, quote: 'due diligence fee of $2,500' },
+});
+const junkyReport = buildReport(junky);
+const junkyIds = junkyReport.allFlags.map((f) => f.id);
+check('meter_start flag fires', junkyIds.includes('meter_start'), true);
+check('funding_speed flag fires', junkyIds.includes('funding_speed'), true);
+check('monitoring_fee flag fires', junkyIds.includes('monitoring_fee'), true);
+check('wire_fees flag fires at $19', junkyIds.includes('wire_fees'), true);
+check('onboarding_fee flag fires', junkyIds.includes('onboarding_fee'), true);
+check('due_diligence flag fires', junkyIds.includes('due_diligence'), true);
+check(
+  'forced monthly minimum promotes to high severity',
+  junkyReport.allFlags.find((f) => f.id === 'monthly_min')?.severity,
+  'high',
+);
+check(
+  'monitoring fee carries $/yr impact',
+  junkyReport.allFlags.find((f) => f.id === 'monitoring_fee')?.estAnnualImpactUsdPer100k,
+  95 * 12,
+);
+check('no "predatory" anywhere in visitor payload', JSON.stringify(junkyReport.visitor).toLowerCase().includes('predatory'), false);
+
+// Near-cost wire ($11) must NOT flag; quiet contract fires none of the new set.
+const quietWire = ExtractionSchema.parse({ ...baseExtraction(), wire_fee_usd: 11 });
+const quietIds = buildReport(quietWire).allFlags.map((f) => f.id);
+check('$11 wire does not flag', quietIds.includes('wire_fees'), false);
+const noneIds = buildReport(ExtractionSchema.parse(baseExtraction())).allFlags.map((f) => f.id);
+check(
+  'nothing-found contract fires none of the new flag set',
+  ['meter_start', 'funding_speed', 'monitoring_fee', 'wire_fees', 'onboarding_fee', 'due_diligence'].some((id) => noneIds.includes(id)),
+  false,
+);
 
 // ============================================================
 console.log(`\n${passed} passed, ${failed} failed`);

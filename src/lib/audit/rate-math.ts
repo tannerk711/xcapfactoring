@@ -115,9 +115,14 @@ export function runRateMath(x: Extraction): RateMathResult {
     const aprOnFace = round1((feePctOfFace / days) * 365);
     const aprOnCash = round1((feePctOfFace / 100 / cashPctOfFace / days) * 365 * 100);
 
-    // Good-factor standard: daily rate, interest on advance only, no minimums, no float.
+    // Better-contract standard: daily rate, interest on advance only, no minimums,
+    // no float. Plus the two 2026-08-05 levers, modeled conservatively: the client
+    // schedules the draw later than invoicing (the meter runs a fraction of the
+    // invoice-to-payment window) and draws only part of the eligible advance.
     const gfDailyPct = (gf.monthlyEquivalentPct * 12) / 365;
-    const goodFactorCostPctOfFace = round2(gfDailyPct * days * (gf.advanceRatePct / 100));
+    const goodFactorCostPctOfFace = round2(
+      gfDailyPct * (days * gf.scheduledDrawDayFraction) * (gf.advanceRatePct / 100) * gf.drawUtilization,
+    );
 
     return {
       days,
@@ -158,7 +163,10 @@ export function runRateMath(x: Extraction): RateMathResult {
   };
 
   assumptions.push(
-    `Better-terms comparison uses the conservative end of the standard we place into: ${gf.monthlyEquivalentPct}% monthly equivalent charged as a daily rate on the amount advanced, no minimum-day charges, no clearing-day float.`,
+    `Better-terms comparison uses the conservative end of the better contract we place into: ${gf.monthlyEquivalentPct}% monthly equivalent charged as a daily rate on the amount advanced, no minimum-day charges, no clearing-day float.`,
+  );
+  assumptions.push(
+    `Scheduled-advance and borrowing-base behavior modeled conservatively: the comparison assumes the meter runs ${Math.round(gf.scheduledDrawDayFraction * 100)}% of the invoice-to-payment window and ${Math.round(gf.drawUtilization * 100)}% of the eligible advance is drawn.`,
   );
 
   return {

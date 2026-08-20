@@ -1,26 +1,33 @@
 // ============================================================================
-// AUDIT TOOL CONFIG. This is the ONE file the Przemek tuning session edits.
-// Everything marked TODO-PRZEMEK-RATE-SHEET is a conservative placeholder that
-// stands in for the good factor's real rate sheet until he provides it.
+// AUDIT TOOL CONFIG. This is the ONE file the Przemek/Darren tuning session
+// edits. Rate-sheet basis (Tanner's call, 2026-08-18): Darren's verbal terms
+// from the 2026-08-05 review call ARE the working rate sheet; he is the good
+// factor's own operator (fact sheet: context/darren-call-2026-08-05.md).
+// Items marked TUNE-AT-SESSION get validated in the 5-to-15-contract session.
 // ============================================================================
 
 export const auditConfig = {
-  // ---- The good factor's terms (PLACEHOLDERS: conservative end of what Przemek
-  // described on the close call: "1 to 1.5%, charged as a daily rate, interest on
-  // the amount advanced only"). Using the EXPENSIVE end (1.5) so every savings
-  // number is a floor, never a walk-back.
+  // ---- The good factor's terms, operator-confirmed by Darren 2026-08-05:
+  // "we do it for one and a half percent," daily-equivalent, interest on the
+  // amount advanced only, borrowing-base draws from 0 to 90% of included AR.
+  // Using the EXPENSIVE end (1.5) so every savings number is a floor, never a
+  // walk-back.
   goodFactor: {
-    // TODO-PRZEMEK-RATE-SHEET: replace with the real rate card per volume tier.
-    monthlyEquivalentPct: 1.5, // conservative end of the 1 to 1.5 range
+    monthlyEquivalentPct: 1.5, // confirmed; volume-tier variations, if any, land at the session
     interestBasis: 'advance' as const, // interest only on the amount advanced
-    advanceRatePct: 90, // TODO-PRZEMEK-RATE-SHEET: confirm typical advance
+    advanceRatePct: 90, // borrowing-base max per Darren (draw 0-90% of included AR)
     minimumChargeDays: 0, // daily rate, no phantom interest
-    floatDays: 0, // TODO-PRZEMEK-RATE-SHEET: confirm clearing-day policy
+    floatDays: 0, // TUNE-AT-SESSION: clearing days not addressed verbally; same-day funding implies none
+    // Better-contract behavior factors (TUNE-AT-SESSION). Conservative reads of
+    // the two levers Darren says can cut client cost ~50% (aging the receivable
+    // + partial draws); we model far milder so savings stay a floor.
+    scheduledDrawDayFraction: 0.85, // the meter runs 85% of the invoice-to-payment window
+    drawUtilization: 0.9, // fraction of the eligible advance actually drawn
   },
 
   // ---- Verdict threshold: below this true monthly-equivalent cost (on cash
   // received) with no critical lock-in flags, the honest answer is "your
-  // contract is competitive." TODO-PRZEMEK-RATE-SHEET: tune in the test session.
+  // contract is competitive." TUNE-AT-SESSION.
   competitiveMonthlyEquivalentPct: 1.5,
 
   // ---- Assumptions used when a field could not be extracted (always labeled
