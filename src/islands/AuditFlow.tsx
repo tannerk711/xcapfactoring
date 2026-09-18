@@ -696,6 +696,15 @@ export default function AuditFlow({ mode, jobId: initialJobId }: Props) {
     return stopPolling;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The /audit page's intro (eyebrow + H1 + lede) only belongs above the form.
+  // Once the audit is submitted the URL becomes /audit/results/<id> without a
+  // navigation, so hide the intro and let the report open on "Audit complete".
+  useEffect(() => {
+    if (mode !== 'form') return;
+    const intro = document.getElementById('audit-intro');
+    if (intro) intro.hidden = phase !== 'form';
+  }, [mode, phase]);
   // ---- file selection ----
   const addFiles = useCallback(
     async (incoming: FileList | File[]) => {
