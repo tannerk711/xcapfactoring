@@ -1,6 +1,7 @@
 // Builds the report payload from extraction + rate math. Red flags ranked by
-// severity then estimated dollar impact; visitor sees the top 5-7, Przemek gets
-// the full list. The incumbent factor's name NEVER enters the visitor payload.
+// severity then estimated dollar impact; visitor sees every flag as a stacked
+// one-liner (2026-08-24 verdict-first redesign), Przemek gets the same list
+// plus internals. The incumbent factor's name NEVER enters the visitor payload.
 import type { Extraction } from './schema';
 import { runRateMath, type RateMathResult } from './rate-math';
 import { auditConfig } from '../../config/audit';
@@ -30,7 +31,7 @@ export interface VisitorReport {
     scenarios: { days: number; feePctOfFace: number; aprOnCash: number }[];
     advanceRatePct: number;
   } | null;
-  flags: RedFlag[]; // top 5-7 only
+  flags: RedFlag[]; // every flag found; each renders as a collapsed one-liner
   totalFlagCount: number;
   verdict: {
     canLikelyHelp: boolean;
@@ -62,7 +63,7 @@ export function buildFlags(x: Extraction, math: RateMathResult): RedFlag[] {
     flags.push({
       id: 'rate_tier',
       severity: 'high',
-      title: 'The rate escalates after the first tier',
+      title: 'Your rate climbs the slower your customer pays',
       clauseQuote: q(x.fee_schedule_verbatim),
       plainEnglish:
         'The rate you remember is the day-1 tier. Every block your customer takes to pay stacks another charge on top, so slow months bill far above the headline.',
@@ -228,7 +229,7 @@ export function buildFlags(x: Extraction, math: RateMathResult): RedFlag[] {
       title: 'The contract renews itself',
       clauseQuote: q(x.auto_renewal.description),
       plainEnglish:
-        'Miss the notice window and the whole term re-signs automatically. Most owners find out the week they try to leave.',
+        'Miss the notice window and the whole term re-signs automatically. Owners often find out the week they try to leave.',
       goodStandard: 'Month-to-month after the initial term, or a clean dated exit in writing.',
       estAnnualImpactUsdPer100k: null,
     });
@@ -238,7 +239,7 @@ export function buildFlags(x: Extraction, math: RateMathResult): RedFlag[] {
     flags.push({
       id: 'exit_window',
       severity: 'critical',
-      title: 'Exit only inside a narrow notice window',
+      title: 'You can only leave inside a narrow notice window',
       clauseQuote: q(x.cancellation_window.description),
       plainEnglish: `Leaving requires written notice inside a specific window${
         x.cancellation_window.certified_mail_required === 'yes' ? ', by certified mail' : ''
@@ -267,7 +268,7 @@ export function buildFlags(x: Extraction, math: RateMathResult): RedFlag[] {
     flags.push({
       id: 'release_hostage',
       severity: 'critical',
-      title: 'The lien release is conditioned on signing a general release',
+      title: 'Even paid off, the lien stays until you sign their release',
       clauseQuote: q(x.release_terms.description),
       plainEnglish:
         'The factor is not required to clear its UCC filing until you sign a release in a form it finds acceptable. This is the documented release-letter hostage pattern, and some contracts make you waive your UCC 9-513 timing rights outright.',
@@ -346,9 +347,10 @@ export function buildFlags(x: Extraction, math: RateMathResult): RedFlag[] {
     flags.push({
       id: 'cross_collateral',
       severity: 'high',
-      title: 'Cross-collateralization / cross-default language',
+      title: 'One breach anywhere becomes recoverable everywhere',
       clauseQuote: null,
-      plainEnglish: 'A breach anywhere becomes recoverable everywhere. One dispute can put unrelated collateral in play.',
+      plainEnglish:
+        'Cross-collateralization and cross-default language ties this facility to everything else. One dispute can put unrelated collateral in play.',
       goodStandard: 'Obligations scoped to this facility alone.',
       estAnnualImpactUsdPer100k: null,
     });
@@ -435,8 +437,10 @@ export function buildReport(x: Extraction): InternalReport {
   const meaningfulSavings =
     (savingsAtVolume ?? savingsPer100k) >= auditConfig.minSavingsToDisplayUsd && !competitive;
 
+  // The results page renders its own headline from the flag count; this line is
+  // the supporting sentence under it, so it must stand alone without a prefix.
   const verdictLine = competitive
-    ? 'Honest answer: your contract is actually competitive. The rate mechanics are fair and we did not find lock-in traps worth a move. Keep it, and keep this report for your renewal window.'
+    ? 'Your contract is actually competitive. The rate mechanics are fair and we did not find lock-in traps worth a move. Keep it, and keep this report for your renewal window.'
     : 'Based on this ballpark read, better terms very likely exist for you. A specialist will confirm the real number against your volume before anything moves.';
 
   const visitor: VisitorReport = {
@@ -454,7 +458,7 @@ export function buildReport(x: Extraction): InternalReport {
       scenarios: math.scenarios.map((s) => ({ days: s.days, feePctOfFace: s.feePctOfFace, aprOnCash: s.aprOnCash })),
       advanceRatePct: math.advanceRatePct,
     },
-    flags: allFlags.slice(0, 7),
+    flags: allFlags,
     totalFlagCount: allFlags.length,
     verdict: { canLikelyHelp: !competitive, line: verdictLine },
     assumptions: math.assumptions,

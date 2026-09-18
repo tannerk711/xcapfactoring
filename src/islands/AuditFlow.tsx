@@ -32,15 +32,6 @@ const STEPS = [
 
 type StepKey = (typeof STEPS)[number]['key'];
 
-const SEVERITY_STAMP: Record<RedFlag['severity'], string> = {
-  maximal: 'Severe',
-  critical: 'Critical',
-  high: 'High',
-  medium: 'Medium',
-};
-
-const EXHIBIT_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-
 const usd = (n: number) => '$' + Math.round(n).toLocaleString('en-US');
 
 // ---------------------------------------------------------------------------
@@ -85,23 +76,14 @@ function mockReport(kind: string): VisitorReport {
       totalFlagCount: 0,
       verdict: {
         canLikelyHelp: false,
-        line: 'Honest answer: your contract is actually competitive. The rate mechanics are fair and we did not find lock-in traps worth a move. Keep it, and keep this report for your renewal window.',
+        line: 'Your contract is actually competitive. The rate mechanics are fair and we did not find lock-in traps worth a move. Keep it, and keep this report for your renewal window.',
       },
       assumptions: ['Better-terms comparison uses the conservative end of the standard we place into: 1.5% monthly equivalent charged as a daily rate on the amount advanced, no minimum-day charges, no clearing-day float.'],
       disclaimers,
     };
   }
-  // default: full 'ok' report with flags
+  // default: full 'ok' report with flags (server sort order: severity, then impact)
   const flags: RedFlag[] = [
-    {
-      id: 'rate_tier',
-      severity: 'high',
-      title: 'The rate escalates after the first tier',
-      clauseQuote: '1.80% of the gross face amount for the first 30 days, plus 0.65% for each 10 day period thereafter',
-      plainEnglish: 'The rate you remember is the day-1 tier. Every block your customer takes to pay stacks another charge on top, so slow months bill far above the headline.',
-      goodStandard: 'A daily rate: the invoice costs exactly the days it took, no tier jumps.',
-      estAnnualImpactUsdPer100k: 1300,
-    },
     {
       id: 'etf',
       severity: 'critical',
@@ -114,10 +96,73 @@ function mockReport(kind: string): VisitorReport {
     {
       id: 'release_hostage',
       severity: 'critical',
-      title: 'The lien release is conditioned on signing a general release',
+      title: 'Even paid off, the lien stays until you sign their release',
       clauseQuote: 'shall have no obligation to terminate its security interest until Seller executes a general release in a form acceptable to Purchaser',
       plainEnglish: 'The factor is not required to clear its UCC filing until you sign a release in a form it finds acceptable. This is the documented release-letter hostage pattern.',
       goodStandard: 'UCC termination on payoff, on the statutory clock, no strings.',
+      estAnnualImpactUsdPer100k: null,
+    },
+    {
+      id: 'auto_renewal',
+      severity: 'critical',
+      title: 'The contract renews itself',
+      clauseQuote: 'shall automatically renew for successive one year terms unless Seller provides written notice at least sixty days prior to the end of the then current Term',
+      plainEnglish: 'Miss the notice window and the whole term re-signs automatically. Owners often find out the week they try to leave.',
+      goodStandard: 'Month-to-month after the initial term, or a clean dated exit in writing.',
+      estAnnualImpactUsdPer100k: null,
+    },
+    {
+      id: 'exit_window',
+      severity: 'critical',
+      title: 'You can only leave inside a narrow notice window',
+      clauseQuote: 'written notice of non-renewal delivered by certified mail no more than ninety and no fewer than sixty days prior to the anniversary date',
+      plainEnglish: 'Leaving requires written notice inside a specific window, by certified mail. Outside that window, the door is closed for another term.',
+      goodStandard: 'Exit terms you can act on any month, in writing before you sign.',
+      estAnnualImpactUsdPer100k: null,
+    },
+    {
+      id: 'rate_tier',
+      severity: 'high',
+      title: 'Your rate climbs the slower your customer pays',
+      clauseQuote: '1.80% of the gross face amount for the first 30 days, plus 0.65% for each 10 day period thereafter',
+      plainEnglish: 'The rate you remember is the day-1 tier. Every block your customer takes to pay stacks another charge on top, so slow months bill far above the headline.',
+      goodStandard: 'A daily rate: the invoice costs exactly the days it took, no tier jumps.',
+      estAnnualImpactUsdPer100k: 1300,
+    },
+    {
+      id: 'full_face',
+      severity: 'high',
+      title: 'Fees are charged on the full invoice, not your advance',
+      clauseQuote: null,
+      plainEnglish: 'You received roughly 88% of each invoice, but the percentage is computed on 100% of it. You pay fees on money you never held.',
+      goodStandard: 'Interest only on the amount actually advanced to you.',
+      estAnnualImpactUsdPer100k: 420,
+    },
+    {
+      id: 'whole_ledger',
+      severity: 'high',
+      title: 'Every customer, every invoice, or you are in breach',
+      clauseQuote: null,
+      plainEnglish: 'Your 20-day payers fund the factor’s margin, and quietly holding invoices back is a default waiting to happen.',
+      goodStandard: 'You choose which customers go into your borrowing base and draw any amount from zero to 90% of that AR, like a line of credit.',
+      estAnnualImpactUsdPer100k: null,
+    },
+    {
+      id: 'monitoring_fee',
+      severity: 'medium',
+      title: 'A monthly monitoring fee of $150',
+      clauseQuote: 'Seller shall pay Purchaser a collateral monitoring fee of $150.00 per month during the Term',
+      plainEnglish: 'A recurring line item for "monitoring" the account you already pay factoring fees on. It has nothing to do with advancing you money and everything to do with padding the bill.',
+      goodStandard: 'No monitoring fee.',
+      estAnnualImpactUsdPer100k: 1800,
+    },
+    {
+      id: 'meter_start',
+      severity: 'medium',
+      title: 'The meter starts the day you invoice',
+      clauseQuote: null,
+      plainEnglish: 'Advances, and the fees on them, begin at invoice purchase whether you needed the cash that day or not. You pay to have money sit in your account before payroll is due.',
+      goodStandard: 'You schedule the advance for the day you actually need the money: payroll day, supplier day. The meter starts then.',
       estAnnualImpactUsdPer100k: null,
     },
   ];
@@ -135,7 +180,7 @@ function mockReport(kind: string): VisitorReport {
       advanceRatePct: 88,
     },
     flags,
-    totalFlagCount: 9,
+    totalFlagCount: flags.length,
     verdict: {
       canLikelyHelp: true,
       line: 'Based on this ballpark read, better terms very likely exist for you. A specialist will confirm the real number against your volume before anything moves.',
@@ -223,35 +268,100 @@ function ProcessingView(props: { activeStep: StepKey }) {
   );
 }
 
-function FlagCard(props: { flag: RedFlag; index: number }) {
-  const { flag, index } = props;
+function FlagIcon() {
   return (
-    <article className={`exhibit ${index % 2 === 0 ? 'exhibit-l' : 'exhibit-r'} p-6 sm:p-7`}>
-      <div className="mb-3 flex items-start justify-between gap-4">
-        <p className="eyebrow eyebrow-ink !text-[0.7rem]">Exhibit {EXHIBIT_LETTERS[index] ?? index + 1}</p>
-        <span className="stamp">{SEVERITY_STAMP[flag.severity]}</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="mt-1 shrink-0">
+      <path d="M5 3v18" stroke="var(--color-flag)" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M5 4h13l-3.2 4.5L18 13H5z" fill="var(--color-flag)" />
+    </svg>
+  );
+}
+
+function BetterTag() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.1em]"
+      style={{ color: 'var(--color-verdict)', borderColor: 'rgb(30 122 84 / 0.35)', background: 'rgb(30 122 84 / 0.06)' }}
+    >
+      Better option exists
+    </span>
+  );
+}
+
+// One flag = one collapsed row. The headline carries the felt problem; the
+// expand carries the proof (the pulled clause) and the better-contract line.
+function FlagRow(props: { flag: RedFlag; open: boolean; onToggle: () => void }) {
+  const { flag, open, onToggle } = props;
+  const panelId = `flag-panel-${flag.id}`;
+  return (
+    <div>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={onToggle}
+        className="flag-btn flex w-full cursor-pointer items-start gap-3 px-5 py-4 text-left sm:items-center sm:px-6 sm:py-5"
+      >
+        <FlagIcon />
+        <span className="min-w-0 flex-1">
+          <span className="display block text-[1.02rem] font-semibold sm:text-[1.08rem]">{flag.title}</span>
+          <span className="mt-1.5 block sm:hidden">
+            <BetterTag />
+          </span>
+        </span>
+        <span className="hidden shrink-0 sm:block">
+          <BetterTag />
+        </span>
+        <span
+          className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border font-mono text-sm transition-transform duration-300 sm:mt-0 ${open ? 'rotate-45' : ''}`}
+          style={{ borderColor: 'var(--color-rule)', color: 'var(--color-inksoft)' }}
+          aria-hidden="true"
+        >
+          +
+        </span>
+      </button>
+      <div id={panelId} className={`acc-panel ${open ? 'acc-open' : ''}`}>
+        <div className="acc-inner">
+          {/* sm+: indent under the title column (24px pad + 18px icon + 12px gap) */}
+          <div className="px-5 pb-5 sm:pb-6 sm:pl-[54px] sm:pr-6">
+            {flag.clauseQuote && (
+              <>
+                <p className="mb-1.5 font-mono text-[0.68rem] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--color-inksoft)' }}>
+                  Pulled from your contract
+                </p>
+                <blockquote className="mono-quote mb-3 rounded border-l-2 py-2 pl-4 pr-2" style={{ borderColor: 'var(--color-flag)', background: 'rgb(192 57 43 / 0.05)' }}>
+                  &ldquo;{flag.clauseQuote}&rdquo;
+                </blockquote>
+              </>
+            )}
+            <p className="body-copy mb-3">{flag.plainEnglish}</p>
+            <p className="body-copy" style={{ color: 'var(--color-verdict)' }}>
+              <strong>The better contract:</strong> {flag.goodStandard}
+            </p>
+            {flag.estAnnualImpactUsdPer100k != null && flag.estAnnualImpactUsdPer100k > 0 && (
+              <p className="tnum mt-3 text-sm" style={{ color: 'var(--color-inksoft)' }}>
+                Estimated impact: about {usd(flag.estAnnualImpactUsdPer100k)}/yr per $100,000 factored, before human review.
+              </p>
+            )}
+          </div>
+        </div>
       </div>
-      <h3 className="display h3 mb-3">{flag.title}</h3>
-      {flag.clauseQuote && (
-        <blockquote className="mono-quote mb-3 rounded border-l-2 py-2 pl-4 pr-2" style={{ borderColor: 'var(--color-flag)', background: 'rgb(192 57 43 / 0.05)' }}>
-          &ldquo;{flag.clauseQuote}&rdquo;
-        </blockquote>
-      )}
-      <p className="body-copy mb-3">{flag.plainEnglish}</p>
-      <p className="body-copy" style={{ color: 'var(--color-verdict)' }}>
-        <strong>The standard we place into:</strong> {flag.goodStandard}
-      </p>
-      {flag.estAnnualImpactUsdPer100k != null && flag.estAnnualImpactUsdPer100k > 0 && (
-        <p className="tnum mt-3 text-sm" style={{ color: 'var(--color-inksoft)' }}>
-          Estimated impact: about {usd(flag.estAnnualImpactUsdPer100k)}/yr per $100,000 factored, before human review.
-        </p>
-      )}
-    </article>
+    </div>
   );
 }
 
 function ResultsView(props: { report: VisitorReport }) {
   const r = props.report;
+  // Which flag rows are expanded (FAQ-style, independently toggleable).
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const toggleFlag = useCallback((id: string) => {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   if (r.status === 'not_factoring') {
     return (
@@ -307,12 +417,37 @@ function ResultsView(props: { report: VisitorReport }) {
         ? { big: usd(r.headline.savingsPerYearPer100k), suffix: 'per year, minimum, for every $100,000 you factor' }
         : null
     : null;
+  // Verdict-first headline: the flag count is the finding, stated up front.
+  const n = r.totalFlagCount;
+  const verdictHeadline = !verdict
+    ? 'Your contract audit'
+    : !verdict.canLikelyHelp
+      ? 'Honest answer: keep this contract.'
+      : n > 1
+        ? `We found ${n} red flags in your contract. Better options exist for all ${n}.`
+        : n === 1
+          ? 'We found 1 red flag in your contract. A better option exists.'
+          : 'Your contract audit is in.';
 
   return (
     <div className="container-page max-w-3xl pb-20 pt-10 sm:pt-14">
-      <p className="eyebrow mb-2">Audit complete</p>
-      <h1 className="display h2 mb-8">Your contract audit</h1>
+      <p className="eyebrow mb-4">Audit complete</p>
 
+      {/* 1. The verdict, front and center */}
+      <section className="sheet mb-8 p-7 sm:p-10">
+        {verdict && (
+          <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-3">
+            <p className="eyebrow eyebrow-ink !mb-0">The verdict</p>
+            <span className={worthAMove ? 'stamp' : 'stamp stamp-green'}>
+              {worthAMove ? 'Worth a move' : 'Keep your contract'}
+            </span>
+          </div>
+        )}
+        <h1 className="display h2">{verdictHeadline}</h1>
+        {verdict && <p className="lede mt-4">{verdict.line}</p>}
+      </section>
+
+      {/* 2. The numbers */}
       {savingsLine && (
         <section className="sheet mb-8 p-7 sm:p-9">
           <p className="eyebrow eyebrow-ink mb-2">Ballpark savings estimate</p>
@@ -321,7 +456,7 @@ function ResultsView(props: { report: VisitorReport }) {
           </p>
           <p className="lede mt-1">{savingsLine.suffix}</p>
           <p className="mt-4 text-sm" style={{ color: 'var(--color-inksoft)' }}>
-            Computed from the conservative end of every assumption, pending human review. The confirmed number is usually higher, not lower.
+            Computed from the conservative end of every assumption, pending human review.
           </p>
         </section>
       )}
@@ -368,35 +503,22 @@ function ResultsView(props: { report: VisitorReport }) {
         </section>
       )}
 
+      {/* 3. The flags, one collapsed row each */}
       {r.flags.length > 0 && (
         <section className="mb-8">
-          <p className="eyebrow mb-5">What we flagged in your contract</p>
-          <div className="space-y-6">
-            {r.flags.map((flag, i) => (
-              <FlagCard key={flag.id} flag={flag} index={i} />
+          <p className="eyebrow mb-2">What we flagged in your contract</p>
+          <p className="body-copy mb-5" style={{ color: 'var(--color-inksoft)' }}>
+            Tap any flag to see what we found in your document.
+          </p>
+          <div className="sheet divide-y divide-rule overflow-clip">
+            {r.flags.map((flag) => (
+              <FlagRow key={flag.id} flag={flag} open={openIds.has(flag.id)} onToggle={() => toggleFlag(flag.id)} />
             ))}
           </div>
-          {r.totalFlagCount > r.flags.length && (
-            <p className="mt-4 text-sm" style={{ color: 'var(--color-inksoft)' }}>
-              Plus {r.totalFlagCount - r.flags.length} more item{r.totalFlagCount - r.flags.length === 1 ? '' : 's'} in the full
-              review. Your specialist walks you through all of them.
-            </p>
-          )}
         </section>
       )}
 
-      {verdict && (
-        <section className="sheet mb-8 p-7 sm:p-9">
-          <div className="mb-3 flex items-center gap-3">
-            <p className="eyebrow eyebrow-ink !mb-0">The verdict</p>
-            <span className={verdict.canLikelyHelp ? 'stamp' : 'stamp stamp-green'}>
-              {verdict.canLikelyHelp ? 'Worth a move' : 'Keep your contract'}
-            </span>
-          </div>
-          <p className="body-copy">{verdict.line}</p>
-        </section>
-      )}
-
+      {/* 4. What happens next */}
       <section className="navy-band mb-8 rounded-xl p-7 sm:p-9">
         <p className="eyebrow mb-2" style={{ color: 'var(--color-marker)' }}>What happens next</p>
         <p className="body-copy" style={{ color: 'var(--color-cream)' }}>
@@ -574,7 +696,6 @@ export default function AuditFlow({ mode, jobId: initialJobId }: Props) {
     return stopPolling;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
   // ---- file selection ----
   const addFiles = useCallback(
     async (incoming: FileList | File[]) => {

@@ -180,7 +180,7 @@ check('Bay View flags include release_hostage', flagIds.includes('release_hostag
 check('Bay View flags include full_face', flagIds.includes('full_face'), true);
 check('Bay View verdict: worth a move', bayReport.visitor.verdict.canLikelyHelp, true);
 check('Bay View visitor status ok', bayReport.visitor.status, 'ok');
-check('Bay View visitor flags capped at 7', bayReport.visitor.flags.length <= 7, true);
+check('Bay View visitor sees every flag (2026-08-24: no cap)', bayReport.visitor.flags.length, bayReport.allFlags.length);
 check('Bay View internal has factor name', bayReport.extraction.factor_name, 'Bay View Funding');
 check(
   'Bay View visitor payload never contains factor name',

@@ -362,6 +362,30 @@ body {
     animation: scan-once 2.6s cubic-bezier(0.45, 0, 0.35, 1) 0.3s infinite both;
   }
 
+  /* ---- audit tool: flag accordion (results page) ---- */
+  .flag-btn {
+    transition: background-color 0.15s ease;
+  }
+  .flag-btn:hover {
+    background: rgb(16 29 51 / 0.025);
+  }
+  .acc-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    /* visibility keeps collapsed content out of the a11y tree + find-in-page;
+       it animates discretely, so the height transition is unaffected */
+    visibility: hidden;
+    transition: grid-template-rows 0.3s ease, visibility 0.3s;
+  }
+  .acc-panel.acc-open {
+    grid-template-rows: 1fr;
+    visibility: visible;
+  }
+  .acc-inner {
+    overflow: hidden;
+    min-height: 0;
+  }
+
   /* ---- audit tool: dropzone ---- */
   .dropzone {
     border: 2px dashed var(--color-rule);
@@ -490,7 +514,8 @@ body {
   }
   .scan-on-load,
   .shimmer::after,
-  .card-media img {
+  .card-media img,
+  .acc-panel {
     animation: none !important;
     transition: none !important;
   }
