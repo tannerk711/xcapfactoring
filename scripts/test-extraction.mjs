@@ -51,7 +51,7 @@ writeFileSync(htmlPath, html);
 
 // ---- 2. render to PDF with puppeteer-core from tools/ ----
 console.log('Rendering to PDF...');
-const toolsDir = resolve(siteDir, '../../../tools');
+const toolsDir = resolve(siteDir, '../../../../tools');
 const toolsRequire = createRequire(join(toolsDir, 'package.json'));
 const puppeteer = toolsRequire('puppeteer-core');
 const CHROME_PATHS = [
