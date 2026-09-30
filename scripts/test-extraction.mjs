@@ -5,7 +5,7 @@
 //
 // Flow: download the SEC EDGAR exhibit HTML (UA header required, SEC blocks
 // default agents) -> render to PDF with puppeteer-core (borrowed from
-// foundation/tools) -> run the REAL pipeline pieces: extractTerms (claude-opus-5
+// tools/) -> run the REAL pipeline pieces: extractTerms (claude-opus-5
 // via messages.parse + zodOutputFormat) -> buildReport -> print the verdict.
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -49,9 +49,9 @@ mkdirSync(tmpDir, { recursive: true });
 const htmlPath = join(tmpDir, 'bayview.html');
 writeFileSync(htmlPath, html);
 
-// ---- 2. render to PDF with puppeteer-core from foundation/tools ----
+// ---- 2. render to PDF with puppeteer-core from tools/ ----
 console.log('Rendering to PDF...');
-const toolsDir = resolve(siteDir, '../../../foundation/tools');
+const toolsDir = resolve(siteDir, '../../../tools');
 const toolsRequire = createRequire(join(toolsDir, 'package.json'));
 const puppeteer = toolsRequire('puppeteer-core');
 const CHROME_PATHS = [
