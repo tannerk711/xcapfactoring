@@ -76,6 +76,13 @@ const baseSchema: Record<string, unknown>[] = [
     <slot />
     {!bare && <Footer />}
     <script>
+      // Ad-click attribution (gclid, utm_*, ValueTrack) captured on every page
+      // into localStorage so the audit form can send it with the lead. Organic
+      // visits store only the landing page + referrer.
+      import { captureAttribution } from '../lib/attribution';
+      captureAttribution();
+    </script>
+    <script>
       // Motion layer loads after idle, never blocks first paint, never loads under reduced motion.
       const boot = () => import('../scripts/motion').then((m) => m.init()).catch(() => {});
       if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {

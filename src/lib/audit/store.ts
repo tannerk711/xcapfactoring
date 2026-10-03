@@ -10,6 +10,7 @@ import { put, head, list, del } from '@vercel/blob';
 import { createHash } from 'node:crypto';
 import { auditConfig } from '../../config/audit';
 import type { VisitorReport, InternalReport } from './report';
+import type { AttributionRecord } from '../attribution';
 
 export type AuditStage = 'reading_contract' | 'extracting_terms' | 'computing_rates' | 'building_report';
 
@@ -41,6 +42,7 @@ export interface JobRecord {
   lead: { name: string; email: string; phone: string };
   files: JobFile[];
   consent: ConsentRecord;
+  attribution?: AttributionRecord; // 2026-10-02; absent on older job records
 }
 
 const JSON_PUT_OPTS = {

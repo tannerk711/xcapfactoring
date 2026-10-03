@@ -6,6 +6,7 @@
 import type { JobRecord } from './store';
 import type { InternalReport, RedFlag } from './report';
 import type { Extraction } from './schema';
+import { toLeadWebhookFields } from '../attribution';
 
 async function post(url: string, payload: unknown): Promise<boolean> {
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -38,6 +39,9 @@ export async function fireLeadWebhook(job: JobRecord): Promise<void> {
     email: job.lead.email,
     phone: job.lead.phone,
     submittedAt: job.createdAt,
+    // Ad-click attribution, flat so each key maps straight to a GHL field.
+    // Every key is always present; organic leads carry '' and lead_source 'organic'.
+    ...toLeadWebhookFields(job.attribution),
     consent: {
       agreed: true,
       text: job.consent.text, // verbatim; map to a Multi Line field in GHL or it truncates

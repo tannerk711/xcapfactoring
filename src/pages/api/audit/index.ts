@@ -8,6 +8,7 @@ import { nanoid } from 'nanoid';
 import { createJob, checkAndStampRateLimit, type JobRecord } from '../../../lib/audit/store';
 import { fireLeadWebhook } from '../../../lib/audit/webhooks';
 import { processAuditJob } from '../../../lib/audit/extract';
+import { normalizeAttribution } from '../../../lib/attribution';
 
 export const prerender = false;
 
@@ -34,6 +35,16 @@ const SubmitSchema = z.object({
     clientTimestamp: z.string().max(64),
     url: z.string().max(500),
   }),
+  // Optional ad-click attribution (gclid, utm_*, ValueTrack). Organic leads
+  // send empty values or nothing at all; normalizeAttribution fills the shape.
+  attribution: z
+    .object({
+      params: z.record(z.string(), z.string().max(200)).optional(),
+      landingPage: z.string().max(500).optional(),
+      referrer: z.string().max(500).optional(),
+      firstSeenAt: z.string().max(64).optional(),
+    })
+    .optional(),
 });
 
 const json = (status: number, body: unknown) =>
@@ -103,6 +114,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       userAgent: request.headers.get('user-agent') ?? '',
       receivedAt: new Date().toISOString(),
     },
+    attribution: normalizeAttribution(data.attribution),
   };
 
   // Lead first (standing rule: fires once, on submit, before analysis).

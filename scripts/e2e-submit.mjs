@@ -50,6 +50,20 @@ const submitRes = await fetch(`${BASE}/api/audit`, {
       clientTimestamp: new Date().toISOString(),
       url: `${BASE}/audit`,
     },
+    // Sample ad attribution so the Zap shows every mappable key populated.
+    attribution: {
+      params: {
+        gclid: 'E2E-TEST-GCLID',
+        utm_source: 'google',
+        utm_medium: 'cpc',
+        utm_campaign: 'xcap-contract-audit',
+        utm_content: 'e2e-adgroup-ad1',
+        utm_term: 'factoring contract audit',
+      },
+      landingPage: `${BASE}/audit?utm_source=google&utm_medium=cpc&utm_campaign=xcap-contract-audit`,
+      referrer: 'https://www.google.com/',
+      firstSeenAt: new Date().toISOString(),
+    },
   }),
 });
 const submitBody = await submitRes.json();

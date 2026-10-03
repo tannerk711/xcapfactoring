@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { upload } from '@vercel/blob/client';
 import { nanoid } from 'nanoid';
 import { sniffBytes, isPhoto, contentTypeFor } from '../lib/audit/sniff';
+import { collectAttribution } from '../lib/attribution';
 import type { VisitorReport, RedFlag } from '../lib/audit/report';
 
 // ---------------------------------------------------------------------------
@@ -820,6 +821,8 @@ export default function AuditFlow({ mode, jobId: initialJobId }: Props) {
                 clientTimestamp: new Date().toISOString(),
                 url: window.location.href,
               },
+              // Ad-click attribution captured on landing (Base.astro); empty for organic.
+              attribution: collectAttribution(),
             }),
           });
           if (res.status === 429) {

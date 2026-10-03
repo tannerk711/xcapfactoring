@@ -10,6 +10,7 @@
     "prep:fonts": "node scripts/prep-fonts.mjs",
     "prep:images": "node scripts/prep-images.mjs",
     "test:math": "node scripts/test-rate-math.mjs",
+    "test:attr": "node scripts/test-attribution.mjs",
     "test:extraction": "node scripts/test-extraction.mjs"
   },
   "dependencies": {

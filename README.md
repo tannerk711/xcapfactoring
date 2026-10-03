@@ -22,7 +22,7 @@ Vercel project for production.
 | --- | --- |
 | `ANTHROPIC_API_KEY` | Contract extraction call (`claude-opus-5`, structured outputs) |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob store (uploads, job store, reports). Auto-injected on Vercel when a Blob store is attached |
-| `LEAD_WEBHOOK_URL` | **Zapier catch hook** (never a GHL inbound webhook). One POST per lead, on submit, with the full TCPA consent record |
+| `LEAD_WEBHOOK_URL` | **Zapier catch hook** (never a GHL inbound webhook). One POST per lead, on submit, with the full TCPA consent record plus flat ad attribution keys (`lead_source`, `gclid`, `gbraid`, `wbraid`, `utm_*`, `campaign_id`, `adgroup_id`, `keyword`, `matchtype`, `device`, `network`, `landing_page`, `referrer`, `first_seen_at`). Every key is always present; organic leads carry empty strings and `lead_source` `organic`. Captured on any page load into localStorage (`src/lib/attribution.ts`), 90-day window |
 | `AUDIT_NOTIFY_WEBHOOK_URL` | **Zapier catch hook** (never a GHL inbound webhook). Completion payload for Przemek: terms table, all flags, factor name, contract link, manual-review flag. If unset, sends are skipped and logged |
 | `CRON_SECRET` | Bearer auth for `/api/cron/cleanup` (daily retention sweep, `vercel.json` cron) |
 | `RETENTION_DAYS` | Optional override of the 90-day contract retention window |
