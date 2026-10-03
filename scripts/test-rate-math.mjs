@@ -25,6 +25,7 @@ await build({
       export * from './src/lib/audit/schema';
       export * from './src/lib/audit/rate-math';
       export * from './src/lib/audit/report';
+      export { buildCompletionPayload } from './src/lib/audit/webhooks';
     `,
     resolveDir: join(here, '..'),
     loader: 'ts',
@@ -36,7 +37,7 @@ await build({
 });
 
 const lib = await import(pathToFileURL(outFile).href);
-const { ExtractionSchema, runRateMath, feePctForDays, buildReport } = lib;
+const { ExtractionSchema, runRateMath, feePctForDays, buildReport, buildCompletionPayload } = lib;
 
 // ---- fixture builder: every field present, "nothing found" defaults ----
 const baseExtraction = () => ({
@@ -202,7 +203,7 @@ const competitive = ExtractionSchema.parse({
 });
 const compReport = buildReport(competitive);
 check('Competitive contract verdict: keep it', compReport.visitor.verdict.canLikelyHelp, false);
-check('Competitive contract: no savings headline', compReport.visitor.headline, null);
+check('Visitor payload carries no dollar-savings headline (cut 2026-10-02)', 'headline' in compReport.visitor, false);
 
 // ============================================================
 // 5. Document gates
@@ -355,6 +356,28 @@ check('Flat contract total = commission (unchanged 2.5%)', corpay30.feePctOfFace
 // admin_plus_interest with no flat_fee_pct: the headline is charged ONCE, never per block.
 const noFlat = ExtractionSchema.parse({ ...middlegate, flat_fee_pct: null });
 check('admin_plus_interest fallback charges the headline once at 60d', feePctForDays(noFlat, 65), 1.0, 0.001);
+
+// ============================================================
+// 8. Przemek's completion payload builds cleanly (2026-10-02: the second
+//    live audit reached the visitor and never reached Przemek; the webhook
+//    now fires before the done signal and the builder is exercised here).
+// ============================================================
+const fakeJob = {
+  id: 'job-test',
+  createdAt: '2026-10-02T12:00:00Z',
+  lead: { name: 'Test', email: 't@example.com', phone: '5555550100' },
+  files: [{ url: 'https://x.public.blob.vercel-storage.com/contracts/a/b.pdf', pathname: 'contracts/a/b.pdf', contentType: 'application/pdf' }],
+  consent: { text: 'x', clientTimestamp: '', url: '', ip: '', userAgent: '', receivedAt: '' },
+};
+const completion = buildCompletionPayload(fakeJob, mgReport, { manualReview: false });
+check('completion payload: factor name present for Przemek', completion.factorName, 'Middlegate Factors LLC');
+check('completion payload: terms table carries the interest terms', completion.termsTable.some((r) => r.field === 'Interest rate terms' && r.value.includes('prime + 2%')), true);
+check('completion payload: summary line stacks commission + interest', completion.summaryText.includes('commission 1% + interest 1.06%'), true);
+check('completion payload: every flag included', completion.flags.length, mgReport.allFlags.length);
+const manual = buildCompletionPayload(fakeJob, null, { manualReview: true, manualReviewReason: 'test' });
+check('completion payload: manual-review path flags manualReview', manual.manualReview, true);
+check('completion payload: manual-review path has no factor name', manual.factorName, null);
+check('completion payload: manual-review path has no terms table', manual.termsTable, undefined);
 
 // ============================================================
 console.log(`\n${passed} passed, ${failed} failed`);

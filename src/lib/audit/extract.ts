@@ -16,7 +16,7 @@ import { ExtractionSchema, type Extraction } from './schema';
 import { buildReport, buildManualReviewReport } from './report';
 import { auditConfig } from '../../config/audit';
 import { sniffBytes, isPhoto } from './sniff';
-import { markStage, writeReports, writeVisitorReportOnly, type JobRecord } from './store';
+import { markStage, writeInternalReport, writeVisitorReportOnly, type JobRecord } from './store';
 import { fireCompletionWebhook } from './webhooks';
 
 const EXTRACTION_SYSTEM = `You are a commercial-finance analyst extracting the terms of invoice factoring agreements for an audit tool. You are given the full document (PDF pages, photos of pages, or extracted text) and must fill the extraction schema.
@@ -190,13 +190,21 @@ export async function processAuditJob(job: JobRecord): Promise<void> {
     const internal = buildReport(extraction);
 
     await markStage(job.id, 4); // building_report
-    await writeReports(job.id, internal, internal.visitor);
+    await writeInternalReport(job.id, internal);
+    // Przemek's notification BEFORE report.json. report.json is the done signal:
+    // the visitor stops polling the moment it exists, and a serverless container
+    // with no request in flight can be frozen mid-webhook. 2026-10-02: the second
+    // live audit produced a report and no notification, exactly that race.
     await fireCompletionWebhook(job, internal, { manualReview: false });
+    await writeVisitorReportOnly(job.id, internal.visitor);
   } catch (err) {
     const reason =
       err instanceof ExtractionFailure ? `${err.reason}: ${err.message}` : err instanceof Error ? err.message : 'unknown error';
     console.error('[audit] pipeline failed for job', job.id, reason);
     try {
+      // Same ordering rule: notify Przemek before the done signal is written.
+      // fireCompletionWebhook never throws, so the visitor report always follows.
+      await fireCompletionWebhook(job, null, { manualReview: true, manualReviewReason: reason });
       if (err instanceof ExtractionFailure && err.reason === 'unreadable_file') {
         // Honest unreadable state: ask for a re-upload, keep the lead.
         const visitor = buildManualReviewReport();
@@ -205,7 +213,6 @@ export async function processAuditJob(job: JobRecord): Promise<void> {
       } else {
         await writeVisitorReportOnly(job.id, buildManualReviewReport());
       }
-      await fireCompletionWebhook(job, null, { manualReview: true, manualReviewReason: reason });
     } catch (inner) {
       console.error('[audit] failure-path write also failed for job', job.id, inner);
     }

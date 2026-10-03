@@ -46,10 +46,6 @@ export const auditConfig = {
   // ---- Payment-timing scenarios the math runs (days to invoice payment).
   scenarios: [30, 45, 60] as const,
 
-  // ---- Savings display floor: if the conservative estimate lands under this,
-  // the report does not lead with a dollar figure (avoids "$40/yr savings" noise).
-  minSavingsToDisplayUsd: 500,
-
   // ---- Contract file retention (days). Spec default 90; confirm with Przemek.
   retentionDays: Number(process.env.RETENTION_DAYS ?? 90),
 

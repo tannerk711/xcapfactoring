@@ -83,12 +83,11 @@ export async function markStage(id: string, stage: 1 | 2 | 3 | 4): Promise<void>
   if (!already.ok) await put(path, '{}', JSON_PUT_OPTS);
 }
 
-export async function writeReports(id: string, internal: InternalReport, visitor: VisitorReport): Promise<void> {
+export async function writeInternalReport(id: string, internal: InternalReport): Promise<void> {
   await put(jobPath(id, 'internal.json'), JSON.stringify(internal), JSON_PUT_OPTS);
-  // report.json LAST: its existence is the done signal.
-  await put(jobPath(id, 'report.json'), JSON.stringify(visitor), JSON_PUT_OPTS);
 }
 
+/** report.json LAST, always: its existence is the done signal the visitor polls for. */
 export async function writeVisitorReportOnly(id: string, visitor: VisitorReport): Promise<void> {
   await put(jobPath(id, 'report.json'), JSON.stringify(visitor), JSON_PUT_OPTS);
 }

@@ -20,11 +20,8 @@ export interface RedFlag {
 
 export interface VisitorReport {
   status: 'ok' | 'not_factoring' | 'unreadable' | 'manual_review';
-  headline: {
-    savingsMinPerYear: number | null; // at volume when known
-    savingsPerYearPer100k: number | null;
-    volumeKnown: boolean;
-  } | null;
+  // No dollar-savings headline for the visitor (cut 2026-10-02); the savings
+  // math stays internal and rides to Przemek on the completion webhook.
   rates: {
     perceivedApr: number;
     effectiveAprAtTypical: number; // 45-day scenario, on cash received, every charge in
@@ -421,7 +418,6 @@ export function buildReport(x: Extraction): InternalReport {
   if (x.document_type === 'unreadable') {
     return wrap(x, null, [], {
       status: 'unreadable',
-      headline: null,
       rates: null,
       flags: [],
       totalFlagCount: 0,
@@ -433,7 +429,6 @@ export function buildReport(x: Extraction): InternalReport {
   if (x.document_type === 'not_financing' || x.document_type === 'other_financing' || x.document_type_confidence_pct < 40) {
     return wrap(x, null, [], {
       status: 'not_factoring',
-      headline: null,
       rates: null,
       flags: [],
       totalFlagCount: 0,
@@ -451,11 +446,6 @@ export function buildReport(x: Extraction): InternalReport {
   const competitive =
     typical.monthlyEquivalentPctOnCash <= auditConfig.competitiveMonthlyEquivalentPct && !hasLockIn;
 
-  const savingsAtVolume = math.savings.perYearAtVolume;
-  const savingsPer100k = math.savings.perYearPer100kFace;
-  const meaningfulSavings =
-    (savingsAtVolume ?? savingsPer100k) >= auditConfig.minSavingsToDisplayUsd && !competitive;
-
   // The results page renders its own headline from the flag count; this line is
   // the supporting sentence under it, so it must stand alone without a prefix.
   const verdictLine = competitive
@@ -464,13 +454,6 @@ export function buildReport(x: Extraction): InternalReport {
 
   const visitor: VisitorReport = {
     status: 'ok',
-    headline: meaningfulSavings
-      ? {
-          savingsMinPerYear: savingsAtVolume,
-          savingsPerYearPer100k: savingsPer100k,
-          volumeKnown: savingsAtVolume != null,
-        }
-      : null,
     rates: {
       perceivedApr: math.perceived.aprSimple,
       effectiveAprAtTypical: typical.aprOnCash,
@@ -496,7 +479,6 @@ function wrap(x: Extraction, math: RateMathResult | null, allFlags: RedFlag[], v
 export function buildManualReviewReport(): VisitorReport {
   return {
     status: 'manual_review',
-    headline: null,
     rates: null,
     flags: [],
     totalFlagCount: 0,

@@ -8,7 +8,8 @@ import type { InternalReport, RedFlag } from './report';
 import type { Extraction } from './schema';
 import { toLeadWebhookFields } from '../attribution';
 
-async function post(url: string, payload: unknown): Promise<boolean> {
+async function post(label: string, url: string, payload: unknown): Promise<boolean> {
+  let lastError = '';
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const res = await fetch(url, {
@@ -17,11 +18,17 @@ async function post(url: string, payload: unknown): Promise<boolean> {
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(10_000),
       });
-      if (res.ok) return true;
-    } catch {
-      // fall through to retry
+      if (res.ok) {
+        console.log(`[audit] ${label} webhook delivered (attempt ${attempt + 1}, status ${res.status})`);
+        return true;
+      }
+      lastError = `status ${res.status}`;
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : String(e);
     }
   }
+  // Loud in the Vercel runtime logs; the pipeline itself never fails on a webhook.
+  console.error(`[audit] ${label} webhook FAILED after 2 attempts: ${lastError}`);
   return false;
 }
 
@@ -32,7 +39,7 @@ export async function fireLeadWebhook(job: JobRecord): Promise<void> {
     console.warn('[audit] LEAD_WEBHOOK_URL not set; lead webhook skipped for job', job.id);
     return;
   }
-  await post(url, {
+  await post(`lead (job ${job.id})`, url, {
     source: 'xcapfactoring.com audit tool',
     jobId: job.id,
     name: job.lead.name,
@@ -139,7 +146,11 @@ export interface CompletionPayload {
   summaryText: string;
 }
 
-/** Przemek's completion notification: extracted terms + ALL flags + factor name + contract link. */
+/**
+ * Przemek's completion notification: extracted terms + ALL flags + factor name
+ * + contract link. Never throws: a payload-build error is logged and the
+ * pipeline goes on to write the visitor report.
+ */
 export async function fireCompletionWebhook(
   job: JobRecord,
   internal: InternalReport | null,
@@ -150,7 +161,21 @@ export async function fireCompletionWebhook(
     console.warn('[audit] AUDIT_NOTIFY_WEBHOOK_URL not set; completion webhook skipped for job', job.id);
     return;
   }
+  let payload: CompletionPayload;
+  try {
+    payload = buildCompletionPayload(job, internal, opts);
+  } catch (e) {
+    console.error('[audit] completion payload build failed for job', job.id, e);
+    return;
+  }
+  await post(`completion (job ${job.id})`, url, payload);
+}
 
+export function buildCompletionPayload(
+  job: JobRecord,
+  internal: InternalReport | null,
+  opts: { manualReview: boolean; manualReviewReason?: string },
+): CompletionPayload {
   const flags: RedFlag[] = internal?.allFlags ?? [];
   const lines: string[] = [
     `Audit ${opts.manualReview ? 'NEEDS MANUAL REVIEW' : 'complete'} for ${job.lead.name} (${job.lead.email}, ${job.lead.phone})`,
@@ -198,5 +223,5 @@ export async function fireCompletionWebhook(
     verdict: internal?.visitor.verdict?.line,
     summaryText: lines.join('\n'),
   };
-  await post(url, payload);
+  return payload;
 }

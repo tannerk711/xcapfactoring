@@ -51,18 +51,17 @@ function mockReport(kind: string): VisitorReport {
     'Actual savings depend on invoice volume, payment timing, and final factor pricing, confirmed in writing before you sign anything.',
   ];
   if (kind === 'notfactoring') {
-    return { status: 'not_factoring', headline: null, rates: null, flags: [], totalFlagCount: 0, verdict: null, assumptions: [], disclaimers };
+    return { status: 'not_factoring', rates: null, flags: [], totalFlagCount: 0, verdict: null, assumptions: [], disclaimers };
   }
   if (kind === 'unreadable') {
-    return { status: 'unreadable', headline: null, rates: null, flags: [], totalFlagCount: 0, verdict: null, assumptions: [], disclaimers };
+    return { status: 'unreadable', rates: null, flags: [], totalFlagCount: 0, verdict: null, assumptions: [], disclaimers };
   }
   if (kind === 'manual') {
-    return { status: 'manual_review', headline: null, rates: null, flags: [], totalFlagCount: 0, verdict: null, assumptions: [], disclaimers };
+    return { status: 'manual_review', rates: null, flags: [], totalFlagCount: 0, verdict: null, assumptions: [], disclaimers };
   }
   if (kind === 'no') {
     return {
       status: 'ok',
-      headline: null,
       rates: {
         perceivedApr: 14.4,
         effectiveAprAtTypical: 15.1,
@@ -170,7 +169,6 @@ function mockReport(kind: string): VisitorReport {
   ];
   return {
     status: 'ok',
-    headline: { savingsMinPerYear: null, savingsPerYearPer100k: 1240, volumeKnown: false },
     rates: {
       perceivedApr: 21.6,
       effectiveAprAtTypical: 34.7,
@@ -413,13 +411,6 @@ function ResultsView(props: { report: VisitorReport }) {
   // Red alarm styling only when the contract is actually the problem; a
   // competitive contract's numbers stay ink.
   const effColor = worthAMove ? 'var(--color-flag)' : 'var(--color-ink)';
-  const savingsLine = r.headline
-    ? r.headline.volumeKnown && r.headline.savingsMinPerYear
-      ? { big: usd(r.headline.savingsMinPerYear), suffix: 'per year, minimum' }
-      : r.headline.savingsPerYearPer100k
-        ? { big: usd(r.headline.savingsPerYearPer100k), suffix: 'per year, minimum, for every $100,000 you factor' }
-        : null
-    : null;
   // Verdict-first headline: the flag count is the finding, stated up front.
   const n = r.totalFlagCount;
   const verdictHeadline = !verdict
@@ -450,20 +441,8 @@ function ResultsView(props: { report: VisitorReport }) {
         {verdict && <p className="lede mt-4">{verdict.line}</p>}
       </section>
 
-      {/* 2. The numbers */}
-      {savingsLine && (
-        <section className="sheet mb-8 p-7 sm:p-9">
-          <p className="eyebrow eyebrow-ink mb-2">Ballpark savings estimate</p>
-          <p className="display tnum" style={{ fontSize: 'clamp(2.4rem, 7vw, 3.6rem)' }}>
-            {savingsLine.big}
-          </p>
-          <p className="lede mt-1">{savingsLine.suffix}</p>
-          <p className="mt-4 text-sm" style={{ color: 'var(--color-inksoft)' }}>
-            Computed from the conservative end of every assumption, pending human review.
-          </p>
-        </section>
-      )}
-
+      {/* 2. The numbers (the dollar savings card was cut 2026-10-02, Tanner's call;
+          the savings math still reaches Przemek through the completion webhook) */}
       {rates && (
         <section className="sheet mb-8 p-7 sm:p-9">
           <p className="eyebrow eyebrow-ink mb-5">Perceived vs effective</p>
