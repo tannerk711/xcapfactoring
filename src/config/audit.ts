@@ -37,6 +37,12 @@ export const auditConfig = {
     headlineMonthlyPctWhenUnknown: 2.5, // industry average headline (Corpay)
   },
 
+  // ---- Index rates for commission + interest contracts ("prime + 2%").
+  // Refresh when the Fed moves; the report discloses the value and date used.
+  indexRates: {
+    prime: { pct: 7.0, asOf: '2026-09-30', label: 'WSJ prime' }, // FRED WPRIME 2026-09-30
+  },
+
   // ---- Payment-timing scenarios the math runs (days to invoice payment).
   scenarios: [30, 45, 60] as const,
 

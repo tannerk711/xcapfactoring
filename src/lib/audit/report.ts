@@ -27,9 +27,10 @@ export interface VisitorReport {
   } | null;
   rates: {
     perceivedApr: number;
-    effectiveAprAtTypical: number; // 45-day scenario, on cash received
+    effectiveAprAtTypical: number; // 45-day scenario, on cash received, every charge in
     scenarios: { days: number; feePctOfFace: number; aprOnCash: number }[];
     advanceRatePct: number;
+    includesInterest: boolean; // commission + interest contract: the figures stack both legs
   } | null;
   flags: RedFlag[]; // every flag found; each renders as a collapsed one-liner
   totalFlagCount: number;
@@ -72,8 +73,25 @@ export function buildFlags(x: Extraction, math: RateMathResult): RedFlag[] {
     });
   }
 
+  // Commission + interest contracts: the headline is the commission, and the
+  // interest leg stacks on top of it for every day the advance is out.
+  if (math.interest) {
+    flags.push({
+      id: 'interest_on_top',
+      severity: 'high',
+      title: `Interest at ${math.interest.label} stacks on top of the commission`,
+      clauseQuote: q(x.interest_charge?.description),
+      plainEnglish:
+        'The commission is the number you remember. Every advance also accrues interest until the factor credits the payment, so the real cost is both charges stacked, and the slower your customers pay, the more of it is interest.',
+      goodStandard: 'One daily rate on the amount advanced. Nothing stacked on top.',
+      estAnnualImpactUsdPer100k: per100k(typical.interestPctOfFace),
+    });
+  }
+
   if (x.interest_base === 'full_invoice_face') {
-    const upliftPct = typical.feePctOfFace * (100 / math.advanceRatePct) - typical.feePctOfFace;
+    // The face-vs-advance uplift applies to the commission leg only; interest is
+    // modeled on its own basis.
+    const upliftPct = typical.commissionPctOfFace * (100 / math.advanceRatePct) - typical.commissionPctOfFace;
     flags.push({
       id: 'full_face',
       severity: 'high',
@@ -208,7 +226,8 @@ export function buildFlags(x: Extraction, math: RateMathResult): RedFlag[] {
     });
   }
 
-  if (x.due_diligence_fee?.found === 'yes') {
+  // A "$0.00 set up fee" line is not a fee (Middlegate, 2026-10-02).
+  if (x.due_diligence_fee?.found === 'yes' && (x.due_diligence_fee.amount_usd == null || x.due_diligence_fee.amount_usd > 0)) {
     flags.push({
       id: 'due_diligence',
       severity: 'medium',
@@ -457,6 +476,7 @@ export function buildReport(x: Extraction): InternalReport {
       effectiveAprAtTypical: typical.aprOnCash,
       scenarios: math.scenarios.map((s) => ({ days: s.days, feePctOfFace: s.feePctOfFace, aprOnCash: s.aprOnCash })),
       advanceRatePct: math.advanceRatePct,
+      includesInterest: math.interest != null,
     },
     flags: allFlags,
     totalFlagCount: allFlags.length,

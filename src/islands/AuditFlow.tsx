@@ -71,6 +71,7 @@ function mockReport(kind: string): VisitorReport {
           { days: 60, feePctOfFace: 2.24, aprOnCash: 15.2 },
         ],
         advanceRatePct: 90,
+        includesInterest: false,
       },
       flags: [],
       totalFlagCount: 0,
@@ -178,6 +179,7 @@ function mockReport(kind: string): VisitorReport {
         { days: 60, feePctOfFace: 3.75, aprOnCash: 25.9 },
       ],
       advanceRatePct: 88,
+      includesInterest: false,
     },
     flags,
     totalFlagCount: flags.length,
@@ -475,6 +477,7 @@ function ResultsView(props: { report: VisitorReport }) {
                 ~{rates.effectiveAprAtTypical}%<span className="text-lg font-normal">/yr</span>
               </p>
               <p className="mt-1 text-sm" style={{ color: 'var(--color-inksoft)' }}>
+                {rates.includesInterest ? 'commission and interest stacked, ' : 'every percentage charge in, '}
                 at a typical 45-day pay cycle, on the cash you actually receive
               </p>
             </div>
@@ -483,7 +486,7 @@ function ResultsView(props: { report: VisitorReport }) {
             <thead>
               <tr className="ledger-row" style={{ color: 'var(--color-inksoft)' }}>
                 <th className="py-2 font-medium">Invoice pays on day</th>
-                <th className="py-2 font-medium">Fee, % of invoice</th>
+                <th className="py-2 font-medium">Total cost, % of invoice</th>
                 <th className="py-2 font-medium">Effective annual rate on cash</th>
               </tr>
             </thead>

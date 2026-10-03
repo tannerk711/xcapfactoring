@@ -1,20 +1,32 @@
 // Deterministic rate math. The model extracts terms; THIS file computes every
 // number the visitor sees. Formula components sourced in
 // context/modern-factoring-research.md section 7:
-//   effective rate = (all fees) / (cash actually received) x (365 / days outstanding)
-// stacking: tier/block escalation + interest base (face vs advance) + minimum-days
-// charge + float days, with monthly minimums handled as an uplift when volume is known.
+//   effective rate = (all fees + interest) / (cash actually received) x (365 / days outstanding)
+// stacking: tier/block escalation + fee base (face vs advance) + minimum-days
+// charge + float days + (2026-10-02) interest on advances for commission +
+// interest contracts, with monthly minimums handled as an uplift when volume is known.
 import type { Extraction } from './schema';
 import { auditConfig } from '../../config/audit';
 
 export interface ScenarioResult {
   days: number; // invoice pays on this day
   billedDays: number; // after minimum-days and float stacking
-  feePctOfFace: number; // total fee charged, as % of invoice face
+  commissionPctOfFace: number; // the discount / commission leg, as % of invoice face
+  interestPctOfFace: number; // the interest-on-advances leg, as % of invoice face (0 when none)
+  feePctOfFace: number; // TOTAL charged, as % of invoice face (commission + interest)
   aprOnFace: number; // annualized on face (the convention published rates use)
   aprOnCash: number; // annualized on cash actually received (the honest number)
   monthlyEquivalentPctOnCash: number;
   goodFactorCostPctOfFace: number; // same scenario at the good-factor standard
+}
+
+export interface InterestLeg {
+  found: boolean;
+  annualRatePct: number; // the rate the math used (index + spread, floored, or the fixed rate)
+  label: string; // "prime + 2%" or "9%"
+  dayCount: number;
+  basisPctOfFace: number; // 1 = face, advance rate / 100 = advance
+  indexUsed: { label: string; pct: number; asOf: string } | null;
 }
 
 export interface RateMathResult {
@@ -26,6 +38,7 @@ export interface RateMathResult {
   };
   advanceRatePct: number;
   advanceRateAssumed: boolean;
+  interest: InterestLeg | null; // null when the contract has no interest leg
   monthlyMinimumUpliftUsdPerYear: number | null; // only when volume + minimum known
   savings: SavingsResult;
   assumptions: string[];
@@ -38,19 +51,26 @@ export interface SavingsResult {
   conservativeScenarioDays: number;
 }
 
-/** Fee % of face for a given number of billed days under the extracted schedule. */
+/** Commission / discount fee % of face for a given number of billed days under the extracted schedule. */
 export function feePctForDays(x: Extraction, billedDays: number): number {
-  // Flat structure: one rate per invoice regardless of days (rare in the wild
-  // but the trucking flat-fee products exist).
-  if (x.fee_structure_type === 'flat' && x.flat_fee_pct != null) {
+  const tiers = x.fee_tiers ?? [];
+
+  // Flat structure: one rate per invoice regardless of days. Also the shape of
+  // the commission leg in commission + interest contracts (a % of the gross
+  // invoice, charged once; the time cost lives in the interest leg).
+  if (tiers.length === 0 && x.flat_fee_pct != null) {
     return x.flat_fee_pct;
   }
 
-  const tiers = x.fee_tiers ?? [];
   if (tiers.length === 0) {
+    const monthly = x.headline_rate_pct ?? auditConfig.assumptions.headlineMonthlyPctWhenUnknown;
+    if (x.fee_structure_type === 'admin_plus_interest') {
+      // Commission charged once per invoice; never prorate it in 30-day blocks
+      // or the interest leg gets double-counted.
+      return monthly;
+    }
     // No schedule extracted: fall back to headline rate prorated in 30-day blocks
     // (block accrual: partial blocks bill as full blocks, the documented doctrine).
-    const monthly = x.headline_rate_pct ?? auditConfig.assumptions.headlineMonthlyPctWhenUnknown;
     const blocks = Math.max(1, Math.ceil(billedDays / 30));
     return monthly * blocks;
   }
@@ -76,6 +96,58 @@ export function feePctForDays(x: Extraction, billedDays: number): number {
   return pct;
 }
 
+/**
+ * Resolve the interest leg (commission + interest contracts). Fixed rate when
+ * stated; otherwise index + spread from config, floored by the contract floor.
+ * Returns null when the document has no interest charge.
+ */
+export function resolveInterestLeg(x: Extraction, advanceRatePct: number, assumptions: string[]): InterestLeg | null {
+  const ic = x.interest_charge;
+  if (!ic || ic.found !== 'yes') return null;
+
+  const prime = auditConfig.indexRates.prime;
+  let annualRatePct: number | null = null;
+  let label = '';
+  let indexUsed: InterestLeg['indexUsed'] = null;
+
+  if (ic.annual_rate_pct != null) {
+    annualRatePct = ic.annual_rate_pct;
+    label = `${ic.annual_rate_pct}%`;
+  } else if (ic.index === 'prime') {
+    const spread = ic.spread_pct ?? 0;
+    annualRatePct = prime.pct + spread;
+    label = spread ? `prime + ${spread}%` : 'prime';
+    indexUsed = { label: prime.label, pct: prime.pct, asOf: prime.asOf };
+    assumptions.push(
+      `Interest on advances modeled at ${prime.label} ${prime.pct}% (as of ${prime.asOf})${spread ? ` plus the ${spread}% spread in your contract` : ''}, ${annualRatePct}% per year.`,
+    );
+  } else if (ic.floor_annual_pct != null) {
+    // Indexed to something we do not track: the contract floor is the honest minimum.
+    annualRatePct = ic.floor_annual_pct;
+    label = `${ic.floor_annual_pct}% (contract floor)`;
+    assumptions.push(
+      `Interest on advances is indexed to a rate not modeled here; the ${ic.floor_annual_pct}% contract floor is used, so the real figure is at least this.`,
+    );
+  } else {
+    assumptions.push('Interest on advances is charged but its rate could not be determined from the document; it is left out of the figures, so the real cost is higher than shown.');
+    return null;
+  }
+
+  if (ic.floor_annual_pct != null && annualRatePct < ic.floor_annual_pct) {
+    annualRatePct = ic.floor_annual_pct;
+    label = `${ic.floor_annual_pct}% (contract floor)`;
+  }
+
+  const dayCount = ic.day_count === 360 ? 360 : 365;
+  let basisPctOfFace = advanceRatePct / 100;
+  if (ic.basis === 'full_invoice_face') basisPctOfFace = 1;
+  if (ic.basis === 'unclear') {
+    assumptions.push('Interest base (invoice face vs amount advanced) unclear in the document; math assumes amount advanced, the cheaper reading.');
+  }
+
+  return { found: true, annualRatePct, label, dayCount, basisPctOfFace, indexUsed };
+}
+
 export function runRateMath(x: Extraction): RateMathResult {
   const assumptions: string[] = [];
 
@@ -93,24 +165,31 @@ export function runRateMath(x: Extraction): RateMathResult {
 
   const minDays = x.minimum_charge_days ?? 0;
   const floatDays = x.float_days ?? 0;
-  const faceBasis = x.interest_base !== 'amount_advanced'; // 'unclear' treated as face? No: conservative = advance.
   // Honesty floor: only bill the face-basis uplift when the contract says face.
   const billOnFace = x.interest_base === 'full_invoice_face';
   if (x.interest_base === 'unclear') {
     assumptions.push('Fee base (invoice face vs amount advanced) unclear in the document; math assumes amount advanced, the cheaper reading.');
   }
 
+  const interest = resolveInterestLeg(x, advanceRatePct, assumptions);
   const gf = auditConfig.goodFactor;
 
   const scenarios: ScenarioResult[] = auditConfig.scenarios.map((days) => {
     // Minimum-days charge first, then clearing-day float on top.
     const billedDays = Math.max(days, minDays) + floatDays;
-    const feePctOfFace = round2(feePctForDays(x, billedDays) * (billOnFace ? 1 : advanceRatePct / 100));
+    const commissionRaw = feePctForDays(x, billedDays) * (billOnFace ? 1 : advanceRatePct / 100);
     // NOTE on the line above: when the fee is charged on the advance, a schedule
     // quoted "on face" scales down by the advance rate; when charged on face it
     // does not. Schedules whose rates are already advance-based extract as such
     // in fee_schedule_verbatim and land in the same math via billOnFace=false.
 
+    // Interest leg: simple interest on the basis for every billed day (the
+    // float days are days the advance is still outstanding, so they count).
+    const interestRaw = interest
+      ? interest.basisPctOfFace * (interest.annualRatePct / 100) * (billedDays / interest.dayCount) * 100
+      : 0;
+
+    const feePctOfFace = round2(commissionRaw + interestRaw);
     const cashPctOfFace = advanceRatePct / 100;
     const aprOnFace = round1((feePctOfFace / days) * 365);
     const aprOnCash = round1((feePctOfFace / 100 / cashPctOfFace / days) * 365 * 100);
@@ -127,6 +206,8 @@ export function runRateMath(x: Extraction): RateMathResult {
     return {
       days,
       billedDays,
+      commissionPctOfFace: round2(commissionRaw),
+      interestPctOfFace: round2(interestRaw),
       feePctOfFace,
       aprOnFace,
       aprOnCash,
@@ -178,6 +259,7 @@ export function runRateMath(x: Extraction): RateMathResult {
     },
     advanceRatePct,
     advanceRateAssumed,
+    interest,
     monthlyMinimumUpliftUsdPerYear,
     savings,
     assumptions,

@@ -24,6 +24,20 @@ export const ExtractionSchema = z.object({
   flat_fee_pct: nNum,
   per_invoice_minimum_fee_usd: nNum,
   interest_base: z.enum(['full_invoice_face', 'amount_advanced', 'unclear']),
+  // 2026-10-02: commission + interest contracts (old-line "discount factoring":
+  // a commission on the gross invoice PLUS interest on outstanding advances at
+  // prime + spread). The interest leg lives here; the commission leg stays in
+  // flat_fee_pct / fee_tiers. rate-math stacks both. Middlegate was the case.
+  interest_charge: z.object({
+    found: Found,
+    annual_rate_pct: nNum, // only when the document states a fixed annual rate
+    index: z.enum(['prime', 'sofr', 'other', 'none']),
+    spread_pct: nNum, // "prime + 2%" -> 2
+    floor_annual_pct: nNum, // "in no event less than 6% per annum" -> 6
+    day_count: nNum, // 360 or 365 when stated
+    basis: z.enum(['amount_advanced', 'full_invoice_face', 'unclear']),
+    description: nStr, // verbatim clause
+  }),
   minimum_charge_days: nNum,
   float_days: nNum,
   batch_billing: Found,

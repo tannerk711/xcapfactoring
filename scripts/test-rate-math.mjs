@@ -47,6 +47,7 @@ const baseExtraction = () => ({
   flat_fee_pct: null,
   per_invoice_minimum_fee_usd: null,
   interest_base: 'unclear',
+  interest_charge: { found: 'no', annual_rate_pct: null, index: 'none', spread_pct: null, floor_annual_pct: null, day_count: null, basis: 'unclear', description: null },
   minimum_charge_days: null,
   float_days: null,
   batch_billing: 'no',
@@ -272,6 +273,88 @@ check(
   ['meter_start', 'funding_speed', 'monitoring_fee', 'wire_fees', 'onboarding_fee', 'due_diligence'].some((id) => noneIds.includes(id)),
   false,
 );
+
+// ============================================================
+// 7. 2026-10-02: commission + interest contracts (Middlegate Factors,
+//    the first real contract through the live tool). 1% commission on the
+//    gross receivable + interest at prime + 2% (floor 6%, 360-day year) on
+//    sums advanced, 85% advance, 5 business clearing days. The old math
+//    scored this as a flat 1% scaled by the advance (0.85% of face, 8.1%/yr
+//    on cash at 45 days, BELOW the 12% perceived). Hand-computed at prime 7.00:
+//      45d, billed 50: commission 1.00 + interest 0.85 x 9% x 50/360 = 1.0625
+//        -> 2.06% of face -> 2.06/0.85/45 x 365 = 19.7%/yr on cash
+//      30d, billed 35: 1.00 + 0.74 = 1.74% -> 24.9%/yr
+//      60d, billed 65: 1.00 + 1.38 = 2.38% -> 17.0%/yr
+// ============================================================
+const middlegate = ExtractionSchema.parse({
+  ...baseExtraction(),
+  factor_name: 'Middlegate Factors LLC',
+  fee_structure_type: 'admin_plus_interest',
+  fee_schedule_verbatim: 'a commission upon the gross amount of the Receivables ... One percent (1.00%)',
+  flat_fee_pct: 1.0,
+  interest_base: 'full_invoice_face',
+  interest_charge: {
+    found: 'yes',
+    annual_rate_pct: null,
+    index: 'prime',
+    spread_pct: 2,
+    floor_annual_pct: 6,
+    day_count: 360,
+    basis: 'amount_advanced',
+    description: 'two percent (2%) in excess of the prime commercial interest rate ... in no event less than 6% per annum (360 day year) ... on the average daily balance of all sums advanced',
+  },
+  advance_rate_pct: 85,
+  float_days: 5,
+  headline_rate_pct: 1.0,
+  wire_fee_usd: 40,
+  due_diligence_fee: { found: 'yes', amount_usd: 0, quote: 'one time set up fee of $00.00' },
+  auto_renewal: { found: 'yes', renewal_period_months: 24, description: 'automatically renewed for successive like periods of the same duration' },
+});
+const mgMath = runRateMath(middlegate);
+const mg30 = mgMath.scenarios.find((s) => s.days === 30);
+const mg45 = mgMath.scenarios.find((s) => s.days === 45);
+const mg60 = mgMath.scenarios.find((s) => s.days === 60);
+check('Middlegate interest leg resolved at prime 7 + 2 = 9%', mgMath.interest?.annualRatePct, 9, 0.001);
+check('Middlegate interest label reads prime + 2%', mgMath.interest?.label, 'prime + 2%');
+check('Middlegate 45d commission = 1.00% of face (on gross, not scaled by advance)', mg45.commissionPctOfFace, 1.0, 0.001);
+check('Middlegate 45d interest = 1.06% of face (85% x 9% x 50/360)', mg45.interestPctOfFace, 1.06, 0.01);
+check('Middlegate 45d total = 2.06% of face', mg45.feePctOfFace, 2.06, 0.01);
+check('Middlegate 45d APR on cash ~19.7% (was 8.1 before the fix)', mg45.aprOnCash, 19.7, 0.2);
+check('Middlegate 30d APR on cash ~24.9%', mg30.aprOnCash, 24.9, 0.2);
+check('Middlegate 60d APR on cash ~17.0%', mg60.aprOnCash, 17.0, 0.2);
+check('Middlegate actual now ABOVE perceived 12%', mg45.aprOnCash > mgMath.perceived.aprSimple, true);
+check('Middlegate prime assumption disclosed with date', mgMath.assumptions.some((a) => a.includes('prime') && a.includes('2026-09-30')), true);
+
+const mgReport = buildReport(middlegate);
+const mgIds = mgReport.allFlags.map((f) => f.id);
+check('Middlegate flags interest_on_top', mgIds.includes('interest_on_top'), true);
+check('Middlegate interest_on_top carries the interest $/yr per 100K', mgReport.allFlags.find((f) => f.id === 'interest_on_top')?.estAnnualImpactUsdPer100k, 1060, 15);
+check('Middlegate full_face uplift uses the commission leg only (~$176/100K)', mgReport.allFlags.find((f) => f.id === 'full_face')?.estAnnualImpactUsdPer100k, 176, 2);
+check('Middlegate $0.00 set up fee does NOT flag due diligence', mgIds.includes('due_diligence'), false);
+check('Middlegate visitor rates flag includesInterest', mgReport.visitor.rates.includesInterest, true);
+check('Middlegate visitor effective = 45d on cash', mgReport.visitor.rates.effectiveAprAtTypical, mg45.aprOnCash, 0.001);
+
+// Floor wins when index + spread sits under it; fixed rate wins over index.
+const floored = ExtractionSchema.parse({
+  ...middlegate,
+  interest_charge: { ...middlegate.interest_charge, spread_pct: -3, floor_annual_pct: 6 },
+});
+check('Interest floor applies (prime 7 - 3 = 4 -> floor 6)', runRateMath(floored).interest?.annualRatePct, 6, 0.001);
+const fixed = ExtractionSchema.parse({
+  ...middlegate,
+  interest_charge: { ...middlegate.interest_charge, annual_rate_pct: 12, index: 'none', spread_pct: null, day_count: 365 },
+});
+const fixed45 = runRateMath(fixed).scenarios.find((s) => s.days === 45);
+check('Fixed 12% on advance, 365-day: 45d interest = 0.85 x 12 x 50/365 = 1.40%', fixed45.interestPctOfFace, 1.4, 0.01);
+
+// No interest leg: nothing changes for flat / tiered contracts.
+check('Flat contract has no interest leg', corpayMath.interest, null);
+check('Flat contract interest % of face = 0', corpay30.interestPctOfFace, 0, 0.001);
+check('Flat contract does not flag interest_on_top', buildReport(corpay).allFlags.some((f) => f.id === 'interest_on_top'), false);
+check('Flat contract total = commission (unchanged 2.5%)', corpay30.feePctOfFace, 2.5, 0.001);
+// admin_plus_interest with no flat_fee_pct: the headline is charged ONCE, never per block.
+const noFlat = ExtractionSchema.parse({ ...middlegate, flat_fee_pct: null });
+check('admin_plus_interest fallback charges the headline once at 60d', feePctForDays(noFlat, 65), 1.0, 0.001);
 
 // ============================================================
 console.log(`\n${passed} passed, ${failed} failed`);

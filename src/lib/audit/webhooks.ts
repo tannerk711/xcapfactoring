@@ -67,7 +67,23 @@ export function buildTermsTable(x: Extraction): { field: string; value: string; 
     termRow('Fee schedule (verbatim)', x.fee_schedule_verbatim),
     termRow('Flat fee %', x.flat_fee_pct),
     termRow('Headline rate %', x.headline_rate_pct),
-    termRow('Interest base', x.interest_base),
+    termRow('Fee base', x.interest_base),
+    termRow('Interest on advances', x.interest_charge?.description, x.interest_charge?.found),
+    termRow(
+      'Interest rate terms',
+      x.interest_charge?.found === 'yes'
+        ? [
+            x.interest_charge.annual_rate_pct != null ? `${x.interest_charge.annual_rate_pct}% fixed` : null,
+            x.interest_charge.index !== 'none' ? `${x.interest_charge.index}${x.interest_charge.spread_pct != null ? ` + ${x.interest_charge.spread_pct}%` : ''}` : null,
+            x.interest_charge.floor_annual_pct != null ? `floor ${x.interest_charge.floor_annual_pct}%` : null,
+            x.interest_charge.day_count != null ? `${x.interest_charge.day_count}-day year` : null,
+            `on ${x.interest_charge.basis}`,
+          ]
+            .filter(Boolean)
+            .join(', ')
+        : null,
+      x.interest_charge?.found,
+    ),
     termRow('Minimum charge days', x.minimum_charge_days),
     termRow('Float days', x.float_days),
     termRow('Batch billing', x.batch_billing),
@@ -141,7 +157,9 @@ export async function fireCompletionWebhook(
     if (internal.math) {
       const typical = internal.math.scenarios.find((s) => s.days === 45) ?? internal.math.scenarios[0];
       lines.push(
-        `Effective APR on cash at 45 days: ${typical.aprOnCash}% (fee ${typical.feePctOfFace}% of face). Perceived: ${internal.math.perceived.aprSimple}%.`,
+        `Effective APR on cash at 45 days: ${typical.aprOnCash}% (total ${typical.feePctOfFace}% of face` +
+          (internal.math.interest ? `: commission ${typical.commissionPctOfFace}% + interest ${typical.interestPctOfFace}% at ${internal.math.interest.label}` : '') +
+          `). Perceived: ${internal.math.perceived.aprSimple}%.`,
       );
       lines.push(
         `Conservative savings: $${internal.math.savings.perYearPer100kFace}/yr per $100K` +
