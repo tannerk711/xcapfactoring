@@ -1,4 +1,5 @@
 ---
+import Logo from './Logo.astro';
 const year = new Date().getFullYear();
 ---
 
@@ -6,11 +7,10 @@ const year = new Date().getFullYear();
   <div class="container-page py-14">
     <div class="grid gap-10 md:grid-cols-[1.4fr_1fr]">
       <div>
-        <p class="display text-xl font-bold text-ink">
-          X<span class="text-verdict">CAP</span>
-          <span class="ml-1 font-mono text-[0.6rem] font-semibold uppercase tracking-[0.22em] text-inksoft">Factoring</span>
-        </p>
-        <p class="body-copy mt-3 max-w-md text-inksoft">
+        <a href="/" class="inline-flex no-underline" aria-label="XCap Factoring home">
+          <Logo class="block h-10 w-auto" />
+        </a>
+        <p class="body-copy mt-4 max-w-md text-inksoft">
           We read factoring contracts for the businesses that signed them. Free audit, your true
           effective rate, and a straight answer on whether better terms exist for you.
         </p>
