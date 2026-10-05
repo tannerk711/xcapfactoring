@@ -7,6 +7,7 @@ import { upload } from '@vercel/blob/client';
 import { nanoid } from 'nanoid';
 import { sniffBytes, isPhoto, contentTypeFor } from '../lib/audit/sniff';
 import { collectAttribution } from '../lib/attribution';
+import { fireLeadConversion } from '../lib/ads-conversion';
 import type { VisitorReport, RedFlag } from '../lib/audit/report';
 
 // ---------------------------------------------------------------------------
@@ -811,6 +812,9 @@ export default function AuditFlow({ mode, jobId: initialJobId }: Props) {
           if (!res.ok) throw new Error('submit failed');
           const body = (await res.json()) as { jobId: string };
           newJobId = body.jobId;
+          // Google Ads lead conversion: the submit was accepted. Fired before the
+          // URL rewrite below so a ?qa=1 walk is still visible to the suppression.
+          if (!honeypot) fireLeadConversion({ email, phone, jobId: newJobId });
         }
 
         jobIdRef.current = newJobId;

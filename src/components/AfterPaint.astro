@@ -1,0 +1,46 @@
+---
+/**
+ * window.afterPaint(fn): run fn once the page has loaded AND painted, on idle.
+ *
+ * Deferring third parties to window load is not enough on PageSpeed: on its
+ * slower hardware a light page fires `load` BEFORE first paint, so scripts
+ * injected on load still start before LCP and Lighthouse bills them to it.
+ * This gate waits for load plus an observed first-contentful-paint, then
+ * requestIdleCallback. A 4s fallback releases the queue regardless (hidden
+ * tabs never paint, older browsers lack paint timing) so tracking always loads.
+ *
+ * Render it in <head> before anything that calls afterPaint (gtag).
+ */
+---
+
+<script is:inline>
+  (function (w, d) {
+    var queue = [], open = false, loaded = d.readyState === 'complete', painted = false;
+    function idle(fn) {
+      if (w.requestIdleCallback) w.requestIdleCallback(fn, { timeout: 2000 });
+      else setTimeout(fn, 1);
+    }
+    function release() {
+      if (open) return;
+      open = true;
+      queue.forEach(function (fn) { idle(fn); });
+      queue = null;
+    }
+    function check() { if (loaded && painted) release(); }
+    w.afterPaint = function (fn) { if (open) idle(fn); else queue.push(fn); };
+    try {
+      if (PerformanceObserver.supportedEntryTypes.indexOf('paint') < 0) throw 0;
+      new PerformanceObserver(function (list, obs) {
+        if (!list.getEntriesByName('first-contentful-paint').length) return;
+        obs.disconnect();
+        painted = true;
+        check();
+      }).observe({ type: 'paint', buffered: true });
+    } catch (e) {
+      painted = true;
+    }
+    if (loaded) check();
+    else w.addEventListener('load', function () { loaded = true; check(); }, { once: true });
+    setTimeout(release, 4000);
+  })(window, document);
+</script>

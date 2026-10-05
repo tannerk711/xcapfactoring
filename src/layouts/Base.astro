@@ -2,6 +2,8 @@
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import AfterPaint from '../components/AfterPaint.astro';
+import { tracking } from '../config/tracking';
 
 interface Props {
   title: string;
@@ -26,6 +28,7 @@ const {
 const site = Astro.site ?? new URL('https://xcapfactoring.com');
 const canonical = new URL(canonicalPath, site).href;
 const ogAbs = new URL(ogImage, site).href;
+const adsTagId = tracking.googleAds.tagId;
 
 const baseSchema: Record<string, unknown>[] = [
   {
@@ -72,6 +75,32 @@ const baseSchema: Record<string, unknown>[] = [
     <meta name="twitter:image" content={ogAbs} />
     <script is:inline>document.documentElement.classList.remove('no-js');</script>
     {baseSchema.map((s) => <script type="application/ld+json" set:html={JSON.stringify(s)} />)}
+    {
+      /* Google tag (Google Ads). The stub queues config and events in the head;
+         the gtag.js library is injected after first paint so it stays out of
+         the LCP path. The lead conversion fires from the audit island on an
+         accepted submit (src/lib/ads-conversion.ts), never on page load. */
+      adsTagId && (
+        <>
+          <AfterPaint />
+          <script is:inline define:vars={{ adsTagId }}>
+            window.dataLayer = window.dataLayer || [];
+            function gtag() {
+              dataLayer.push(arguments);
+            }
+            window.gtag = gtag;
+            gtag('js', new Date());
+            gtag('config', adsTagId, { allow_enhanced_conversions: true });
+            afterPaint(function () {
+              var s = document.createElement('script');
+              s.async = true;
+              s.src = 'https://www.googletagmanager.com/gtag/js?id=' + adsTagId;
+              document.head.appendChild(s);
+            });
+          </script>
+        </>
+      )
+    }
   </head>
   <body>
     {!bare && <Header />}
