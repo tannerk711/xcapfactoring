@@ -33,19 +33,20 @@ async function post(label: string, url: string, payload: unknown): Promise<boole
 }
 
 /** Fired ONCE per lead, on submit, before any analysis. Full TCPA consent record. */
-export async function fireLeadWebhook(job: JobRecord): Promise<void> {
+export async function fireLeadWebhook(job: JobRecord): Promise<boolean> {
   const url = process.env.LEAD_WEBHOOK_URL;
   if (!url) {
     console.warn('[audit] LEAD_WEBHOOK_URL not set; lead webhook skipped for job', job.id);
-    return;
+    return false;
   }
-  await post(`lead (job ${job.id})`, url, {
+  const ok = await post(`lead (job ${job.id})`, url, {
     source: 'xcapfactoring.com audit tool',
     jobId: job.id,
     name: job.lead.name,
     email: job.lead.email,
     phone: job.lead.phone,
     submittedAt: job.createdAt,
+    honeypotFilled: job.honeypotFilled === true,
     // Ad-click attribution, flat so each key maps straight to a GHL field.
     // Every key is always present; organic leads carry '' and lead_source 'organic'.
     ...toLeadWebhookFields(job.attribution),
@@ -59,6 +60,8 @@ export async function fireLeadWebhook(job: JobRecord): Promise<void> {
       receivedAt: job.consent.receivedAt,
     },
   });
+  if (!ok) console.error('[audit] lead webhook unreachable or non-OK', JSON.stringify({ name: job.lead.name, email: job.lead.email }));
+  return ok;
 }
 
 function termRow(field: string, value: string | number | null | undefined, found?: string): { field: string; value: string; found: string } {

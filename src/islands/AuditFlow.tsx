@@ -593,6 +593,11 @@ export default function AuditFlow({ mode, jobId: initialJobId }: Props) {
   const [dragOver, setDragOver] = useState(false);
 
   const inFlightRef = useRef(false);
+  // First interaction (first file drop or keystroke), set once; feeds secondsToComplete.
+  const startedAtRef = useRef(0);
+  const markStarted = () => {
+    if (!startedAtRef.current) startedAtRef.current = Date.now();
+  };
   const jobIdRef = useRef<string | null>(initialJobId ?? null);
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollStartRef = useRef(0);
@@ -704,6 +709,7 @@ export default function AuditFlow({ mode, jobId: initialJobId }: Props) {
         picked.push({ file, kind });
       }
 
+      markStarted();
       setFiles((prev) => {
         const hasDoc = picked.some((p) => !isPhoto(p.kind));
         let next: PickedFile[];
@@ -793,7 +799,8 @@ export default function AuditFlow({ mode, jobId: initialJobId }: Props) {
               name: name.trim(),
               email: email.trim(),
               phone: phone.trim(),
-              company: honeypot,
+              ff_hp: honeypot,
+              secondsToComplete: startedAtRef.current ? Math.round((Date.now() - startedAtRef.current) / 1000) : null,
               files: uploaded,
               consent: {
                 agreed: true,
@@ -953,10 +960,10 @@ export default function AuditFlow({ mode, jobId: initialJobId }: Props) {
 
       <div className="mt-5 space-y-4">
         <FieldRow label="Name">
-          <input className="field" type="text" name="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="field" type="text" name="name" autoComplete="name" value={name} onChange={(e) => { markStarted(); setName(e.target.value); }} />
         </FieldRow>
         <FieldRow label="Email">
-          <input className="field" type="email" name="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input className="field" type="email" name="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => { markStarted(); setEmail(e.target.value); }} />
         </FieldRow>
         <FieldRow label="Phone">
           <input
@@ -966,7 +973,7 @@ export default function AuditFlow({ mode, jobId: initialJobId }: Props) {
             autoComplete="tel"
             inputMode="tel"
             value={phone}
-            onChange={(e) => setPhone(normalizePhone(e.target.value))}
+            onChange={(e) => { markStarted(); setPhone(normalizePhone(e.target.value)); }}
           />
         </FieldRow>
       </div>
@@ -974,8 +981,8 @@ export default function AuditFlow({ mode, jobId: initialJobId }: Props) {
       {/* honeypot: humans never see it, autofill skips aria-hidden + tabIndex -1 */}
       <div aria-hidden="true" className="absolute h-0 w-0 overflow-hidden">
         <label>
-          Company
-          <input type="text" name="company" tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
+          Leave this empty
+          <input type="text" id="ff-hp" name="ff_hp" tabIndex={-1} autoComplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
         </label>
       </div>
 

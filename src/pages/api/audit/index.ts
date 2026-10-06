@@ -18,7 +18,6 @@ const SubmitSchema = z.object({
   name: z.string().trim().min(1).max(200),
   email: z.string().trim().email().max(320),
   phone: z.string().trim().min(7).max(30),
-  company: z.string().optional().default(''), // honeypot; humans never see it
   files: z
     .array(
       z.object({
@@ -47,6 +46,9 @@ const SubmitSchema = z.object({
     .optional(),
 });
 
+// Seconds from first interaction to submit, sent by the client. Anything else is "unknown".
+const secondsOf = (v: unknown) => Number(v);
+
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
@@ -58,29 +60,53 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     return json(400, { error: 'invalid request body' });
   }
 
-  const parsed = SubmitSchema.safeParse(raw);
+  // Honeypot. The trap carries a nonsense name (`ff_hp`) plus password-manager
+  // ignore attributes, and a filled trap is only decisive when the form was
+  // "completed" in under ~20 s. A human whose form filler hit it takes longer:
+  // that lead gets a REAL job and honeypotFilled: true on the lead webhook.
+  // `company` is the pre-rename trap name; cached bundles still send it.
+  // Runs before validation so a fast bot always gets the plausible fake jobId.
+  const body = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const who = () =>
+    JSON.stringify({
+      name: typeof body.name === 'string' ? body.name : undefined,
+      email: typeof body.email === 'string' ? body.email : undefined,
+    });
+  const trap = [body.ff_hp, body.company].find((v) => typeof v === 'string' && v.trim() !== '');
+  delete body.ff_hp;
+  delete body.company;
+  const seconds = secondsOf(body.secondsToComplete);
+  const honeypotFilled = trap !== undefined;
+  if (honeypotFilled) {
+    if (!Number.isFinite(seconds) || seconds < 20) {
+      console.warn(`[audit] dropped: honeypot filled, form done in ${seconds}s`, who());
+      return json(200, { jobId: nanoid(21) });
+    }
+    console.warn(`[audit] honeypot filled after ${seconds}s, forwarding flagged`, who());
+  }
+
+  const parsed = SubmitSchema.safeParse(body);
   if (!parsed.success) {
+    console.warn(`[audit] rejected: missing ${parsed.error.issues[0]?.path.join('.') || 'body'}`, who());
     return json(400, { error: 'validation failed', details: parsed.error.issues.map((i) => i.path.join('.')).slice(0, 5) });
   }
   const data = parsed.data;
 
-  // Honeypot: bots that fill the hidden field get a plausible response and no job.
-  if (data.company && data.company.trim().length > 0) {
-    return json(200, { jobId: nanoid(21) });
-  }
-
   // Consent gate is server-side because this is a legal record; a client-only
   // gate is bypassable. 400 when consent is absent.
   if (data.consent.agreed !== true) {
+    console.warn('[audit] rejected: missing consent', who());
     return json(400, { error: 'consent required' });
   }
 
   // One document (PDF/DOCX) or up to 30 photos; never a mix.
   const docCount = data.files.filter((f) => !f.contentType.startsWith('image/')).length;
   if (docCount > 1 || (docCount === 1 && data.files.length > 1)) {
+    console.warn('[audit] rejected: invalid file mix', who());
     return json(400, { error: 'upload a single PDF or DOCX, or photos of the pages' });
   }
   if (docCount === 0 && data.files.length > 30) {
+    console.warn('[audit] rejected: too many photos', who());
     return json(400, { error: 'up to 30 photos' });
   }
 
@@ -94,6 +120,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   try {
     const allowed = await checkAndStampRateLimit(ip);
     if (!allowed) {
+      console.warn('[audit] rejected: rate limited', who());
       return json(429, { error: 'Too many audits from this connection. Try again in an hour.' });
     }
   } catch (err) {
@@ -115,17 +142,31 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       receivedAt: new Date().toISOString(),
     },
     attribution: normalizeAttribution(data.attribution),
+    honeypotFilled,
   };
 
   // Lead first (standing rule: fires once, on submit, before analysis).
-  await fireLeadWebhook(job);
+  const webhookOk = await fireLeadWebhook(job);
 
   try {
     await createJob(job);
   } catch (err) {
-    console.error('[audit] job record write failed:', err);
+    console.error('[audit] job record write failed:', who(), err);
     return json(500, { error: 'We could not start the audit, but your details went through. Our analyst will review your contract personally.' });
   }
+
+  // One line per accepted submission, so "did it reach the Zap" is a log search.
+  console.log(
+    `[audit] accepted, webhook ${webhookOk ? 'delivered' : 'FAILED'}`,
+    JSON.stringify({
+      name: data.name,
+      email: data.email,
+      receivedAt: job.consent.receivedAt,
+      ip,
+      seconds,
+      honeypotFilled,
+    }),
+  );
 
   waitUntil(processAuditJob(job));
 

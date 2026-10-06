@@ -43,6 +43,7 @@ export interface JobRecord {
   files: JobFile[];
   consent: ConsentRecord;
   attribution?: AttributionRecord; // 2026-10-02; absent on older job records
+  honeypotFilled?: boolean; // trap was filled but the visitor was slow enough to be human
 }
 
 const JSON_PUT_OPTS = {
