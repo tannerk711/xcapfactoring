@@ -60,12 +60,10 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     return json(400, { error: 'invalid request body' });
   }
 
-  // Honeypot. The trap carries a nonsense name (`ff_hp`) plus password-manager
-  // ignore attributes, and a filled trap is only decisive when the form was
-  // "completed" in under ~20 s. A human whose form filler hit it takes longer:
-  // that lead gets a REAL job and honeypotFilled: true on the lead webhook.
-  // `company` is the pre-rename trap name; cached bundles still send it.
-  // Runs before validation so a fast bot always gets the plausible fake jobId.
+  // Honeypot is a LABEL, never a gate (Tanner, 2026-10-06: every complete
+  // submit fires the Zap and becomes a lead). A filled trap travels as
+  // honeypotFilled: true on the payload and gets one log line; nothing is
+  // dropped. The pre-rename trap key is still read for cached bundles.
   const body = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const who = () =>
     JSON.stringify({
@@ -78,11 +76,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   const seconds = secondsOf(body.secondsToComplete);
   const honeypotFilled = trap !== undefined;
   if (honeypotFilled) {
-    if (!Number.isFinite(seconds) || seconds < 20) {
-      console.warn(`[audit] dropped: honeypot filled, form done in ${seconds}s`, who());
-      return json(200, { jobId: nanoid(21) });
-    }
-    console.warn(`[audit] honeypot filled after ${seconds}s, forwarding flagged`, who());
+    console.warn(`[audit] trap filled (${seconds}s), forwarding flagged`, who());
   }
 
   const parsed = SubmitSchema.safeParse(body);

@@ -145,9 +145,9 @@ const FILLED = 'http://spam.example';
 const cases = [
   { n: 1, name: 'normal', body: () => ({ ...clone(), [secondsKey]: 95 }), status: 200, forwarded: true, flagged: false, log: /accepted/i },
   { n: 2, name: 'trap-slow', body: () => ({ ...clone(), [hpKey]: FILLED, [secondsKey]: 95 }), status: 200, forwarded: true, flagged: true, log: /flag|forward/i },
-  { n: 3, name: 'trap-fast', body: () => ({ ...clone(), [hpKey]: FILLED, [secondsKey]: 4 }), status: 200, forwarded: false, log: /dropped/i },
-  ...(oldKey ? [{ n: 4, name: 'old-key-fast', body: () => ({ ...clone(), [oldKey]: FILLED, [secondsKey]: 4 }), status: 200, forwarded: false, log: /dropped/i }] : []),
-  { n: 5, name: 'no-seconds', body: () => { const b = { ...clone(), [hpKey]: FILLED }; delete b[secondsKey]; return b; }, status: 200, forwarded: false, log: /dropped/i },
+  { n: 3, name: 'trap-fast', body: () => ({ ...clone(), [hpKey]: FILLED, [secondsKey]: 4 }), status: 200, forwarded: true, flagged: true, log: /flag|forward/i },
+  ...(oldKey ? [{ n: 4, name: 'old-key-fast', body: () => ({ ...clone(), [oldKey]: FILLED, [secondsKey]: 4 }), status: 200, forwarded: true, flagged: true, log: /flag|forward/i }] : []),
+  { n: 5, name: 'no-seconds', body: () => { const b = { ...clone(), [hpKey]: FILLED }; delete b[secondsKey]; return b; }, status: 200, forwarded: true, flagged: true, log: /flag|forward/i },
   { n: 6, name: 'missing', body: () => ({ ...clone(), [requiredField]: '', [secondsKey]: 95 }), status: 400, forwarded: false, log: /rejected|missing|invalid/i },
   { n: 7, name: 'webhook-down', body: () => ({ ...clone(), [secondsKey]: 95 }), status: 200, forwarded: 'attempted', log: /lead webhook unreachable.*hp-test@example.com/i, catcherStatus: 500 },
 ];
